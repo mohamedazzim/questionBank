@@ -3,13 +3,26 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Question Bank API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: subjects
+    description: Subject operations
+  - name: chapters
+    description: Chapter operations
+  - name: questions
+    description: Question operations
+  - name: choices
+    description: Choice operations
+  - name: dashboard
+    description: Dashboard analytics
+  - name: export
+    description: PDF export operations
+
 paths:
   /healthz:
     get:
@@ -24,6 +37,679 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # SUBJECTS
+  /subjects:
+    get:
+      operationId: listSubjects
+      tags: [subjects]
+      summary: List all subjects
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of subjects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subject"
+    post:
+      operationId: createSubject
+      tags: [subjects]
+      summary: Create a subject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubjectBody"
+      responses:
+        "201":
+          description: Created subject
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /subjects/{id}:
+    get:
+      operationId: getSubject
+      tags: [subjects]
+      summary: Get a subject by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Subject
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateSubject
+      tags: [subjects]
+      summary: Update a subject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubjectBody"
+      responses:
+        "200":
+          description: Updated subject
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteSubject
+      tags: [subjects]
+      summary: Delete a subject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # CHAPTERS
+  /chapters:
+    get:
+      operationId: listChapters
+      tags: [chapters]
+      summary: List chapters, optionally filtered by subject
+      parameters:
+        - name: subjectId
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of chapters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Chapter"
+    post:
+      operationId: createChapter
+      tags: [chapters]
+      summary: Create a chapter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChapterBody"
+      responses:
+        "201":
+          description: Created chapter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chapter"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chapters/{id}:
+    get:
+      operationId: getChapter
+      tags: [chapters]
+      summary: Get a chapter by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Chapter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chapter"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateChapter
+      tags: [chapters]
+      summary: Update a chapter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChapterBody"
+      responses:
+        "200":
+          description: Updated chapter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chapter"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteChapter
+      tags: [chapters]
+      summary: Delete a chapter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # QUESTIONS
+  /questions:
+    get:
+      operationId: listQuestions
+      tags: [questions]
+      summary: List questions with optional filters
+      parameters:
+        - name: chapterId
+          in: query
+          schema:
+            type: integer
+        - name: subjectId
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+            enum: [EASY, MEDIUM, HARD]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [MCQ, FILLUP]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionListResponse"
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Create a question (with optional image upload)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionBody"
+      responses:
+        "201":
+          description: Created question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /questions/{id}:
+    get:
+      operationId: getQuestion
+      tags: [questions]
+      summary: Get a question by ID (with choices)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Question with choices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateQuestion
+      tags: [questions]
+      summary: Update a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UpdateQuestionBody"
+      responses:
+        "200":
+          description: Updated question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteQuestion
+      tags: [questions]
+      summary: Delete a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /questions/{id}/image:
+    get:
+      operationId: getQuestionImage
+      tags: [questions]
+      summary: Serve question image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Image binary
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: No image
+
+  /questions/{id}/preview:
+    get:
+      operationId: previewQuestion
+      tags: [questions]
+      summary: Get full question preview data with base64 images
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Question preview with base64 images
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionPreview"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # CHOICES
+  /choices:
+    post:
+      operationId: createChoice
+      tags: [choices]
+      summary: Create a choice for a question
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateChoiceBody"
+      responses:
+        "201":
+          description: Created choice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Choice"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /choices/{id}:
+    put:
+      operationId: updateChoice
+      tags: [choices]
+      summary: Update a choice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/UpdateChoiceBody"
+      responses:
+        "200":
+          description: Updated choice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Choice"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteChoice
+      tags: [choices]
+      summary: Delete a choice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /choices/{id}/image:
+    get:
+      operationId: getChoiceImage
+      tags: [choices]
+      summary: Serve choice image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Image binary
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: No image
+
+  # DASHBOARD
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/subject-breakdown:
+    get:
+      operationId: getSubjectBreakdown
+      tags: [dashboard]
+      summary: Get question count breakdown by subject
+      responses:
+        "200":
+          description: Subject breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubjectBreakdown"
+
+  /dashboard/difficulty-breakdown:
+    get:
+      operationId: getDifficultyBreakdown
+      tags: [dashboard]
+      summary: Get question count breakdown by difficulty
+      responses:
+        "200":
+          description: Difficulty breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DifficultyBreakdown"
+
+  /dashboard/recent-questions:
+    get:
+      operationId: getRecentQuestions
+      tags: [dashboard]
+      summary: Get recently added questions
+      responses:
+        "200":
+          description: Recent questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+
+  # PDF EXPORT
+  /export/pdf/question/{id}:
+    get:
+      operationId: exportQuestionPdf
+      tags: [export]
+      summary: Export single question to PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found
+
+  /export/pdf/chapter/{id}:
+    get:
+      operationId: exportChapterPdf
+      tags: [export]
+      summary: Export all questions in a chapter to PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found
+
+  /export/pdf/subject/{id}:
+    get:
+      operationId: exportSubjectPdf
+      tags: [export]
+      summary: Export all questions in a subject to PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found
+
+  /export/pdf/selected:
+    post:
+      operationId: exportSelectedPdf
+      tags: [export]
+      summary: Export selected questions to PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportSelectedBody"
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +720,392 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Subject:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        chapterCount:
+          type: ["integer", "null"]
+        questionCount:
+          type: ["integer", "null"]
+      required:
+        - id
+        - name
+        - createdAt
+
+    CreateSubjectBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    Chapter:
+      type: object
+      properties:
+        id:
+          type: integer
+        subjectId:
+          type: integer
+        subjectName:
+          type: ["string", "null"]
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        questionCount:
+          type: ["integer", "null"]
+      required:
+        - id
+        - subjectId
+        - name
+        - createdAt
+
+    CreateChapterBody:
+      type: object
+      properties:
+        subjectId:
+          type: integer
+        name:
+          type: string
+      required:
+        - subjectId
+        - name
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+        chapterId:
+          type: integer
+        chapterName:
+          type: ["string", "null"]
+        subjectId:
+          type: ["integer", "null"]
+        subjectName:
+          type: ["string", "null"]
+        text:
+          type: string
+        type:
+          type: string
+          enum: [MCQ, FILLUP]
+        difficulty:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        imageUrl:
+          type: ["string", "null"]
+        imageName:
+          type: ["string", "null"]
+        imageType:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        choiceCount:
+          type: ["integer", "null"]
+      required:
+        - id
+        - chapterId
+        - text
+        - type
+        - difficulty
+        - createdAt
+
+    QuestionListResponse:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - questions
+        - total
+        - page
+        - limit
+        - totalPages
+
+    CreateQuestionBody:
+      type: object
+      properties:
+        chapterId:
+          type: integer
+        text:
+          type: string
+        type:
+          type: string
+          enum: [MCQ, FILLUP]
+        difficulty:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        image:
+          type: string
+          format: binary
+      required:
+        - chapterId
+        - text
+        - type
+        - difficulty
+
+    UpdateQuestionBody:
+      type: object
+      properties:
+        chapterId:
+          type: integer
+        text:
+          type: string
+        type:
+          type: string
+          enum: [MCQ, FILLUP]
+        difficulty:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        image:
+          type: string
+          format: binary
+        removeImage:
+          type: string
+          enum: ["true", "false"]
+
+    Choice:
+      type: object
+      properties:
+        id:
+          type: integer
+        questionId:
+          type: integer
+        text:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        imageName:
+          type: ["string", "null"]
+        isCorrect:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - questionId
+        - text
+        - isCorrect
+        - createdAt
+
+    CreateChoiceBody:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        text:
+          type: string
+        isCorrect:
+          type: boolean
+        image:
+          type: string
+          format: binary
+      required:
+        - questionId
+        - text
+        - isCorrect
+
+    UpdateChoiceBody:
+      type: object
+      properties:
+        text:
+          type: string
+        isCorrect:
+          type: boolean
+        image:
+          type: string
+          format: binary
+        removeImage:
+          type: string
+          enum: ["true", "false"]
+
+    QuestionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        chapterId:
+          type: integer
+        chapterName:
+          type: ["string", "null"]
+        subjectId:
+          type: ["integer", "null"]
+        subjectName:
+          type: ["string", "null"]
+        text:
+          type: string
+        type:
+          type: string
+          enum: [MCQ, FILLUP]
+        difficulty:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        imageUrl:
+          type: ["string", "null"]
+        imageName:
+          type: ["string", "null"]
+        imageType:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        choices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Choice"
+      required:
+        - id
+        - chapterId
+        - text
+        - type
+        - difficulty
+        - createdAt
+        - choices
+
+    ChoicePreview:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        isCorrect:
+          type: boolean
+        imageData:
+          type: ["string", "null"]
+        imageType:
+          type: ["string", "null"]
+      required:
+        - id
+        - text
+        - isCorrect
+
+    QuestionPreview:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        type:
+          type: string
+          enum: [MCQ, FILLUP]
+        difficulty:
+          type: string
+          enum: [EASY, MEDIUM, HARD]
+        chapterName:
+          type: ["string", "null"]
+        subjectName:
+          type: ["string", "null"]
+        imageData:
+          type: ["string", "null"]
+        imageType:
+          type: ["string", "null"]
+        choices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChoicePreview"
+      required:
+        - id
+        - text
+        - type
+        - difficulty
+        - choices
+
+    DashboardStats:
+      type: object
+      properties:
+        totalSubjects:
+          type: integer
+        totalChapters:
+          type: integer
+        totalQuestions:
+          type: integer
+        totalMCQ:
+          type: integer
+        totalFillup:
+          type: integer
+        easyCount:
+          type: integer
+        mediumCount:
+          type: integer
+        hardCount:
+          type: integer
+      required:
+        - totalSubjects
+        - totalChapters
+        - totalQuestions
+        - totalMCQ
+        - totalFillup
+        - easyCount
+        - mediumCount
+        - hardCount
+
+    SubjectBreakdown:
+      type: object
+      properties:
+        subjectId:
+          type: integer
+        subjectName:
+          type: string
+        questionCount:
+          type: integer
+        chapterCount:
+          type: integer
+      required:
+        - subjectId
+        - subjectName
+        - questionCount
+        - chapterCount
+
+    DifficultyBreakdown:
+      type: object
+      properties:
+        difficulty:
+          type: string
+        count:
+          type: integer
+      required:
+        - difficulty
+        - count
+
+    ExportSelectedBody:
+      type: object
+      properties:
+        questionIds:
+          type: array
+          items:
+            type: integer
+        title:
+          type: string
+      required:
+        - questionIds

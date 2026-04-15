@@ -1,0 +1,416 @@
+Build a production-grade enterprise Question Bank Web Application.
+
+The system must allow administrators to create Subjects, Chapters, Questions, and Choices with LaTeX support, image uploads stored directly inside Microsoft SQL Server as BLOB, live preview rendering, and professional PDF export functionality.
+
+Use clean architecture and scalable modular structure.
+
+TECH STACK REQUIREMENTS
+
+Frontend:
+
+React
+TypeScript
+TailwindCSS or Bootstrap
+KaTeX (for LaTeX rendering)
+react-split-pane (for draggable editor preview layout)
+
+Backend:
+
+Node.js
+Express.js
+
+Database:
+
+Microsoft SQL Server (MSSQL)
+
+PDF Engine:
+
+Puppeteer
+
+Image Upload Handling:
+
+multer memory storage
+
+Images must be stored inside MSSQL using VARBINARY(MAX), NOT filesystem storage.
+
+APPLICATION FUNCTIONAL FLOW
+
+Step 1:
+
+Create Subjects
+
+Step 2:
+
+Inside Subject → Create Chapters
+
+Step 3:
+
+Inside Chapter → Create Questions
+
+Step 4:
+
+Inside Question → Add Choices
+
+Step 5:
+
+Preview Question
+
+Step 6:
+
+Save Question
+
+Step 7:
+
+Export Questions to PDF
+
+DATABASE DESIGN REQUIREMENTS
+
+Create normalized schema.
+
+Subjects Table
+
+subject_id INT PRIMARY KEY IDENTITY
+subject_name NVARCHAR(255)
+created_at DATETIME DEFAULT GETDATE()
+
+Chapters Table
+
+chapter_id INT PRIMARY KEY IDENTITY
+subject_id INT FOREIGN KEY REFERENCES subjects(subject_id)
+chapter_name NVARCHAR(255)
+created_at DATETIME DEFAULT GETDATE()
+
+Questions Table
+
+question_id INT PRIMARY KEY IDENTITY
+chapter_id INT FOREIGN KEY REFERENCES chapters(chapter_id)
+
+question_text NVARCHAR(MAX)
+
+question_type VARCHAR(20)
+Allowed values:
+
+MCQ
+FILLUP
+
+difficulty_level VARCHAR(20)
+Allowed values:
+
+EASY
+MEDIUM
+HARD
+
+question_image VARBINARY(MAX)
+
+question_image_name NVARCHAR(255)
+
+question_image_type NVARCHAR(50)
+
+question_image_size INT
+
+created_at DATETIME DEFAULT GETDATE()
+
+Choices Table
+
+choice_id INT PRIMARY KEY IDENTITY
+question_id INT FOREIGN KEY REFERENCES questions(question_id)
+
+choice_text NVARCHAR(MAX)
+
+choice_image VARBINARY(MAX)
+
+choice_image_name NVARCHAR(255)
+
+choice_image_type NVARCHAR(50)
+
+choice_image_size INT
+
+is_correct BIT
+
+FRONTEND ADMIN DASHBOARD REQUIREMENTS
+
+Create professional admin interface with navigation:
+
+Dashboard
+Subjects
+Chapters
+Questions
+Question Editor
+PDF Export Panel
+
+QUESTION EDITOR PAGE REQUIREMENTS
+
+Create split-screen layout.
+
+Left panel:
+
+Manual question entry form
+
+Right panel:
+
+Preview rendering panel
+
+Between panels:
+
+Resizable draggable divider using react-split-pane
+
+QUESTION ENTRY FORM FIELDS
+
+Question Text Input
+
+Supports LaTeX syntax
+
+Upload Question Image
+
+Dropdown:
+
+Question Type
+
+MCQ
+Fill-up
+
+Dropdown:
+
+Difficulty Level
+
+Easy
+Medium
+Hard
+
+CHOICES SECTION REQUIREMENTS
+
+Add Choice button
+
+Each choice supports:
+
+Choice text input
+
+Optional image upload
+
+Correct answer checkbox selector
+
+Allow dynamic number of choices between 2 and 6
+
+PREVIEW PANEL REQUIREMENTS
+
+Preview renders ONLY when Preview button clicked
+
+Preview must display:
+
+Question number
+
+Rendered LaTeX question text
+
+Question image
+
+Choice list
+
+Choice images
+
+Use KaTeX renderer
+
+BACKEND IMAGE STORAGE REQUIREMENTS
+
+Use multer memory storage
+
+Store images inside MSSQL as:
+
+VARBINARY(MAX)
+
+Also store metadata:
+
+image_name
+
+image_type
+
+image_size
+
+Return Base64 encoded images during preview rendering
+
+BACKEND API REQUIREMENTS
+
+Create REST APIs:
+
+POST /subjects
+
+GET /subjects
+
+POST /chapters
+
+GET /chapters/:subjectId
+
+POST /questions
+
+GET /questions/:chapterId
+
+POST /choices
+
+GET /choices/:questionId
+
+GET /preview/question/:questionId
+
+PDF EXPORT REQUIREMENTS
+
+Support exporting:
+
+Selected questions
+
+Entire chapter
+
+Entire subject
+
+PDF must include:
+
+Rendered LaTeX
+
+Question images from database BLOB
+
+Choice images from database BLOB
+
+Correct numbering
+
+Clean formatting
+
+PDF EXPORT IMPLEMENTATION METHOD
+
+Convert question content to HTML template
+
+Embed Base64 encoded images
+
+Render HTML using Puppeteer
+
+Export to PDF file
+
+SPLIT SCREEN EDITOR IMPLEMENTATION REQUIREMENT
+
+Use react-split-pane
+
+Allow dynamic resizing
+
+Persist panel width during session
+
+VALIDATION REQUIREMENTS
+
+Question text required
+
+Minimum 2 choices required for MCQ
+
+Exactly one correct choice required
+
+Chapter must exist before question creation
+
+Subject must exist before chapter creation
+
+Allow fill-up question without choices
+
+SEARCH AND FILTER FEATURES
+
+Search questions by keyword
+
+Filter by difficulty level
+
+Filter by question type
+
+Filter by subject
+
+Filter by chapter
+
+SECURITY REQUIREMENTS
+
+Validate uploaded image types:
+
+PNG
+JPG
+JPEG
+
+Limit upload size
+
+Sanitize LaTeX input
+
+Prevent SQL injection using parameterized queries
+
+PROJECT STRUCTURE REQUIREMENTS
+
+backend/
+
+controllers
+
+routes
+
+models
+
+services
+
+middlewares
+
+database
+
+utils
+
+pdfExporter
+
+frontend/
+
+components
+
+pages
+
+layouts
+
+services
+
+hooks
+
+utils
+
+ADVANCED DASHBOARD FEATURES
+
+Display:
+
+Total Subjects Count
+
+Total Chapters Count
+
+Total Questions Count
+
+Questions per subject statistics
+
+Questions per chapter statistics
+
+BONUS ENTERPRISE FEATURES
+
+Pagination for question lists
+
+Lazy loading question images
+
+Reusable preview component
+
+Reusable PDF export template
+
+Reusable API service layer
+
+DELIVERABLES REQUIRED
+
+Complete backend source code
+
+Complete frontend source code
+
+MSSQL schema scripts
+
+REST API implementation
+
+Image upload implementation
+
+Split screen editor implementation
+
+Live preview renderer
+
+PDF export module
+
+Search and filtering module
+
+Dashboard analytics summary
+
+Clear setup instructions
+
+README documentation
