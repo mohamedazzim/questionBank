@@ -242,15 +242,28 @@ export default function QuestionEditor() {
     const file = e.target.files?.[0];
     if (file) {
       form.setValue(fieldName, file);
-      form.setValue(`${fieldName.split('.')[0]}._localPreview`, URL.createObjectURL(file) as any);
-      form.setValue(`${fieldName.split('.')[0]}.removeImage`, false as any);
+      const parts: string[] = fieldName.split(".");
+      const prefix = parts.slice(0, -1).join(".");
+      if (prefix) {
+        form.setValue(`${prefix}._localPreview` as any, URL.createObjectURL(file) as any);
+        form.setValue(`${prefix}.removeImage` as any, false as any);
+      } else {
+        form.setValue("_localPreview" as any, URL.createObjectURL(file) as any);
+        form.setValue("removeImage" as any, false as any);
+      }
     }
   };
 
   const handleRemoveImage = (fieldNamePrefix: string) => {
-    form.setValue(`${fieldNamePrefix}.image` as any, undefined);
-    form.setValue(`${fieldNamePrefix}._localPreview` as any, undefined);
-    form.setValue(`${fieldNamePrefix}.removeImage` as any, true);
+    if (fieldNamePrefix) {
+      form.setValue(`${fieldNamePrefix}.image` as any, undefined);
+      form.setValue(`${fieldNamePrefix}._localPreview` as any, undefined);
+      form.setValue(`${fieldNamePrefix}.removeImage` as any, true);
+    } else {
+      form.setValue("image" as any, undefined);
+      form.setValue("_localPreview" as any, undefined);
+      form.setValue("removeImage" as any, true);
+    }
   };
 
   const setCorrectChoice = (index: number) => {

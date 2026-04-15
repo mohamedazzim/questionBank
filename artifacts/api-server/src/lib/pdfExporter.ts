@@ -1,5 +1,54 @@
 import puppeteer from "puppeteer";
+import katex from "katex";
+import { readFileSync, existsSync } from "fs";
+import { dirname } from "path";
+import { createRequire } from "module";
+import { execSync } from "child_process";
 import { logger } from "./logger";
+
+function findChromium(): string | undefined {
+  const candidates = [
+    "/run/current-system/sw/bin/chromium",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  try {
+    const which = execSync("which chromium 2>/dev/null || which chromium-browser 2>/dev/null || which google-chrome 2>/dev/null", { encoding: "utf-8" }).trim();
+    if (which && existsSync(which)) return which;
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
+const CHROMIUM_PATH = findChromium();
+
+const require = createRequire(import.meta.url);
+const katexJsPath = require.resolve("katex"); // resolves to .../katex/dist/katex.js
+const katexDistDir = dirname(katexJsPath);    // .../katex/dist
+const katexFontsDir = `${katexDistDir}/fonts`;
+const katexCssRaw = readFileSync(`${katexDistDir}/katex.min.css`, "utf-8");
+
+// Inline katex fonts as base64 so PDF renders correctly without network
+const katexCss = katexCssRaw.replace(/url\(fonts\/([^)]+)\)/g, (_match, filename) => {
+  try {
+    const fontBuffer = readFileSync(`${katexFontsDir}/${filename}`);
+    const ext = filename.split(".").pop()?.toLowerCase();
+    const mime =
+      ext === "woff2" ? "font/woff2"
+      : ext === "woff" ? "font/woff"
+      : ext === "ttf" ? "font/truetype"
+      : "font/opentype";
+    return `url(data:${mime};base64,${fontBuffer.toString("base64")})`;
+  } catch {
+    return `url(fonts/${filename})`;
+  }
+});
 
 interface ChoiceForPdf {
   id: number;
@@ -26,14 +75,94 @@ function bufferToBase64DataUri(data: Buffer | null | undefined, mimeType: string
   return `data:${mimeType};base64,${data.toString("base64")}`;
 }
 
-function renderLatexToHtml(text: string): string {
-  // Escape HTML but preserve LaTeX markers
-  let escaped = text
+function renderLatex(text: string): string {
+  // Split on $$ (block) and $ (inline) delimiters and render server-side
+  let result = "";
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    // Try block math $$...$$
+    const blockStart = remaining.indexOf("$$");
+    const inlineStart = remaining.indexOf("$");
+
+    if (blockStart !== -1 && (inlineStart === -1 || blockStart <= inlineStart)) {
+      const blockEnd = remaining.indexOf("$$", blockStart + 2);
+      if (blockEnd !== -1) {
+        result += escapeHtml(remaining.slice(0, blockStart));
+        const math = remaining.slice(blockStart + 2, blockEnd);
+        try {
+          result += katex.renderToString(math, { displayMode: true, throwOnError: false });
+        } catch {
+          result += escapeHtml(`$$${math}$$`);
+        }
+        remaining = remaining.slice(blockEnd + 2);
+        continue;
+      }
+    }
+
+    // Try inline math $...$
+    if (inlineStart !== -1) {
+      const inlineEnd = remaining.indexOf("$", inlineStart + 1);
+      if (inlineEnd !== -1 && remaining[inlineStart + 1] !== "$") {
+        result += escapeHtml(remaining.slice(0, inlineStart));
+        const math = remaining.slice(inlineStart + 1, inlineEnd);
+        try {
+          result += katex.renderToString(math, { displayMode: false, throwOnError: false });
+        } catch {
+          result += escapeHtml(`$${math}$`);
+        }
+        remaining = remaining.slice(inlineEnd + 1);
+        continue;
+      }
+    }
+
+    // Also handle \[...\] block math
+    const bracketStart = remaining.indexOf("\\[");
+    if (bracketStart !== -1) {
+      const bracketEnd = remaining.indexOf("\\]", bracketStart + 2);
+      if (bracketEnd !== -1) {
+        result += escapeHtml(remaining.slice(0, bracketStart));
+        const math = remaining.slice(bracketStart + 2, bracketEnd);
+        try {
+          result += katex.renderToString(math, { displayMode: true, throwOnError: false });
+        } catch {
+          result += escapeHtml(`\\[${math}\\]`);
+        }
+        remaining = remaining.slice(bracketEnd + 2);
+        continue;
+      }
+    }
+
+    // Also handle \(...\) inline math
+    const parenStart = remaining.indexOf("\\(");
+    if (parenStart !== -1) {
+      const parenEnd = remaining.indexOf("\\)", parenStart + 2);
+      if (parenEnd !== -1) {
+        result += escapeHtml(remaining.slice(0, parenStart));
+        const math = remaining.slice(parenStart + 2, parenEnd);
+        try {
+          result += katex.renderToString(math, { displayMode: false, throwOnError: false });
+        } catch {
+          result += escapeHtml(`\\(${math}\\)`);
+        }
+        remaining = remaining.slice(parenEnd + 2);
+        continue;
+      }
+    }
+
+    result += escapeHtml(remaining);
+    break;
+  }
+
+  return result;
+}
+
+function escapeHtml(text: string): string {
+  return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  // Mark LaTeX blocks (we'll inject KaTeX via the HTML template)
-  return escaped;
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 export async function generatePdf(questions: QuestionForPdf[], title: string): Promise<Buffer> {
@@ -55,7 +184,7 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
       return `
         <div class="choice ${c.isCorrect ? "correct" : ""}">
           <span class="choice-letter">${String.fromCharCode(65 + ci)}.</span>
-          <span class="choice-text" data-latex="${encodeURIComponent(c.text)}">${c.text}</span>
+          <span class="choice-text">${renderLatex(c.text)}</span>
           ${correctMark}
           ${choiceImageHtml}
         </div>`;
@@ -73,8 +202,8 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
             <span class="badge type-badge">${typeLabel}</span>
           </div>
         </div>
-        ${q.subjectName ? `<div class="question-meta">${q.subjectName}${q.chapterName ? ` › ${q.chapterName}` : ""}</div>` : ""}
-        <div class="question-text" data-latex="${encodeURIComponent(q.text)}">${q.text}</div>
+        ${q.subjectName ? `<div class="question-meta">${escapeHtml(q.subjectName)}${q.chapterName ? ` › ${escapeHtml(q.chapterName)}` : ""}</div>` : ""}
+        <div class="question-text">${renderLatex(q.text)}</div>
         ${questionImageHtml}
         ${q.choices.length > 0 ? `<div class="choices">${choicesHtml}</div>` : ""}
       </div>`;
@@ -85,17 +214,14 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <title>${escapeHtml(title)}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
+${katexCss}
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: Arial, sans-serif;
       font-size: 12pt;
       color: #1a1a2e;
       background: white;
@@ -237,6 +363,8 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
       border-radius: 3px;
     }
     
+    .katex-display { overflow-x: auto; }
+
     @media print {
       .question-block { break-inside: avoid; }
     }
@@ -244,38 +372,12 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
 </head>
 <body>
   <div class="cover">
-    <h1>${title}</h1>
+    <h1>${escapeHtml(title)}</h1>
     <div class="subtitle">Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} · ${questions.length} question${questions.length !== 1 ? "s" : ""}</div>
   </div>
   <div class="content">
     ${questionsHtml}
   </div>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      // Render LaTeX in question texts and choice texts
-      document.querySelectorAll("[data-latex]").forEach(function(el) {
-        var text = decodeURIComponent(el.getAttribute("data-latex"));
-        try {
-          // Clear existing content and render with auto-render
-          el.innerHTML = "";
-          var span = document.createElement("span");
-          span.textContent = text;
-          el.appendChild(span);
-          renderMathInElement(el, {
-            delimiters: [
-              {left: "$$", right: "$$", display: true},
-              {left: "$", right: "$", display: false},
-              {left: "\\\\(", right: "\\\\)", display: false},
-              {left: "\\\\[", right: "\\\\]", display: true}
-            ],
-            throwOnError: false
-          });
-        } catch(e) {
-          el.textContent = text;
-        }
-      });
-    });
-  </script>
 </body>
 </html>`;
 
@@ -283,17 +385,18 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
   try {
     browser = await puppeteer.launch({
       headless: true,
+      executablePath: "/run/current-system/sw/bin/chromium",
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
+        "--disable-web-security",
+        "--font-render-hinting=none",
       ],
     });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
-    // Wait for KaTeX to render
-    await page.waitForTimeout(1000);
+    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
