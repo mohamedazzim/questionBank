@@ -1,13 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useListSubjects, useListChapters, useListQuestions } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Download, FileText, Library, BookOpen, ListChecks } from "lucide-react";
+import { AlertTriangle, FileText, Library, BookOpen, ListChecks } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LatexRenderer } from "@/components/latex-renderer";
+
+type ExportHealth = {
+  canGeneratePdf: boolean;
+  browserPath: string | null;
+};
 
 export default function Export() {
   const { toast } = useToast();
@@ -22,6 +28,31 @@ export default function Export() {
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
   
   const [isExporting, setIsExporting] = useState(false);
+  const [exportHealth, setExportHealth] = useState<ExportHealth | null>(null);
+  const [isHealthLoading, setIsHealthLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadExportHealth = async () => {
+      try {
+        const res = await fetch("/api/export/health");
+        if (!res.ok) throw new Error("Failed to load export health");
+        const data = (await res.json()) as ExportHealth;
+        if (active) setExportHealth(data);
+      } catch (error) {
+        console.error(error);
+        if (active) setExportHealth({ canGeneratePdf: false, browserPath: null });
+      } finally {
+        if (active) setIsHealthLoading(false);
+      }
+    };
+
+    loadExportHealth();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const { data: subjects } = useListSubjects();
   const { data: exportChapters } = useListChapters({ 
@@ -37,7 +68,10 @@ export default function Export() {
     chapterId: filterChapterId !== "all" ? Number(filterChapterId) : undefined,
     limit: 100 // Loading up to 100 for easy selection in this demo
   }, {
-    query: { enabled: exportType === "selected" }
+    query: {
+      enabled: exportType === "selected",
+      queryKey: ["listQuestions", filterSubjectId, filterChapterId]
+    }
   });
 
   const toggleQuestionSelection = (id: number) => {
@@ -91,7 +125,10 @@ export default function Export() {
         filename = `Custom_Selection_${selectedQuestionIds.length}_Questions.pdf`;
       }
 
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) {
+        const errorBody = await res.text();
+        throw new Error(errorBody || "Export failed");
+      }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -159,6 +196,16 @@ export default function Export() {
           <CardTitle>Configuration</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {!isHealthLoading && !exportHealth?.canGeneratePdf && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>PDF runtime is not ready</AlertTitle>
+              <AlertDescription>
+                Install Google Chrome or Microsoft Edge on this machine, then restart the API server. Export is disabled until a browser runtime is detected.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {exportType === "subject" && (
             <div className="space-y-4 max-w-md">
               <div className="space-y-2">
@@ -292,7 +339,12 @@ export default function Export() {
       </Card>
 
       <div className="flex justify-end">
-        <Button size="lg" onClick={handleExport} disabled={isExporting} className="w-full sm:w-auto">
+        <Button
+          size="lg"
+          onClick={handleExport}
+          disabled={isExporting || isHealthLoading || !exportHealth?.canGeneratePdf}
+          className="w-full sm:w-auto"
+        >
           {isExporting ? (
             <span className="flex items-center">Generating PDF...</span>
           ) : (

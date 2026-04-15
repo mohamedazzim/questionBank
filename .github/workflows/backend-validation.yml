@@ -1,0 +1,39 @@
+name: Backend Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  runtime-validation:
+    name: Runtime Validation
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Study-Smart-Hub-Backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Study-Smart-Hub-Backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run backend runtime validation (CI mode)
+        run: npm run qa:full-runtime-validation -- --ci
+
+      - name: Upload runtime validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-runtime-validation-report
+          path: Study-Smart-Hub-Backend/report.json
+          if-no-files-found: warn

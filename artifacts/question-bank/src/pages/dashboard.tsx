@@ -19,6 +19,10 @@ export default function Dashboard() {
   const { data: difficultyBreakdown, isLoading: difficultyLoading } = useGetDifficultyBreakdown();
   const { data: recentQuestions, isLoading: recentLoading } = useGetRecentQuestions();
 
+  const safeSubjectBreakdown = Array.isArray(subjectBreakdown) ? subjectBreakdown : [];
+  const safeDifficultyBreakdown = Array.isArray(difficultyBreakdown) ? difficultyBreakdown : [];
+  const safeRecentQuestions = Array.isArray(recentQuestions) ? recentQuestions : [];
+
   return (
     <div className="space-y-8">
       <div>
@@ -41,9 +45,9 @@ export default function Dashboard() {
           <CardContent className="h-[300px]">
             {subjectLoading ? (
               <Skeleton className="w-full h-full" />
-            ) : subjectBreakdown && subjectBreakdown.length > 0 ? (
+            ) : safeSubjectBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={subjectBreakdown}>
+                <BarChart data={safeSubjectBreakdown}>
                   <XAxis dataKey="subjectName" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip 
@@ -66,11 +70,11 @@ export default function Dashboard() {
           <CardContent className="h-[300px] flex items-center justify-center">
             {difficultyLoading ? (
               <Skeleton className="w-full h-full" />
-            ) : difficultyBreakdown && difficultyBreakdown.length > 0 ? (
+            ) : safeDifficultyBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={difficultyBreakdown}
+                    data={safeDifficultyBreakdown}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -79,7 +83,7 @@ export default function Dashboard() {
                     dataKey="count"
                     nameKey="difficulty"
                   >
-                    {difficultyBreakdown.map((entry, index) => (
+                    {safeDifficultyBreakdown.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={DIFFICULTY_COLORS[entry.difficulty] || COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -102,9 +106,9 @@ export default function Dashboard() {
             <div className="space-y-4">
               {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
             </div>
-          ) : recentQuestions && recentQuestions.length > 0 ? (
+          ) : safeRecentQuestions.length > 0 ? (
             <div className="space-y-4">
-              {recentQuestions.map(q => (
+              {safeRecentQuestions.map(q => (
                 <div key={q.id} className="flex items-start justify-between p-4 border rounded-lg bg-card">
                   <div className="space-y-1 overflow-hidden">
                     <div className="flex items-center gap-2 mb-2">

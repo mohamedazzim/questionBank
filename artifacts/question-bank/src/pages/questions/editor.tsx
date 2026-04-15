@@ -95,7 +95,7 @@ export default function QuestionEditor() {
   
   const { data: subjects } = useListSubjects();
   const { data: existingQuestion, isLoading: isLoadingQuestion } = useGetQuestion(questionId, {
-    query: { enabled: isEditing }
+    query: { enabled: isEditing, queryKey: ["getQuestion", questionId] }
   });
 
   const createQuestion = useCreateQuestion();
@@ -128,10 +128,10 @@ export default function QuestionEditor() {
   const watchType = form.watch("type");
   const watchChoices = form.watch("choices");
 
-  const { data: chapters } = useListChapters({ 
-    subjectId: watchSubjectId ? Number(watchSubjectId) : undefined 
+  const { data: chapters } = useListChapters({
+    subjectId: watchSubjectId ? Number(watchSubjectId) : undefined
   }, {
-    query: { enabled: !!watchSubjectId }
+    query: { enabled: !!watchSubjectId, queryKey: ["listChapters", watchSubjectId] }
   });
 
   // Populate form when editing

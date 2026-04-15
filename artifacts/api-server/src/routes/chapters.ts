@@ -111,6 +111,15 @@ router.put("/chapters/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  // Verify subject exists if subjectId is being changed
+  if (parsed.data.subjectId) {
+    const [subject] = await db.select().from(subjectsTable).where(eq(subjectsTable.id, parsed.data.subjectId));
+    if (!subject) {
+      res.status(400).json({ error: "Subject not found" });
+      return;
+    }
+  }
+
   const [chapter] = await db
     .update(chaptersTable)
     .set({ name: parsed.data.name, subjectId: parsed.data.subjectId })
@@ -122,7 +131,23 @@ router.put("/chapters/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json({ ...chapter, subjectName: null, questionCount: null });
+  // Get the updated chapter with counts and subject name
+  const [updated] = await db
+    .select({
+      id: chaptersTable.id,
+      subjectId: chaptersTable.subjectId,
+      subjectName: subjectsTable.name,
+      name: chaptersTable.name,
+      createdAt: chaptersTable.createdAt,
+      questionCount: sql<number>`cast(count(distinct ${questionsTable.id}) as int)`,
+    })
+    .from(chaptersTable)
+    .leftJoin(subjectsTable, eq(subjectsTable.id, chaptersTable.subjectId))
+    .leftJoin(questionsTable, eq(questionsTable.chapterId, chaptersTable.id))
+    .where(eq(chaptersTable.id, params.data.id))
+    .groupBy(chaptersTable.id, chaptersTable.subjectId, chaptersTable.name, chaptersTable.createdAt, subjectsTable.name);
+
+  res.json(updated || { ...chapter, subjectName: null, questionCount: 0 });
 });
 
 router.delete("/chapters/:id", async (req, res): Promise<void> => {

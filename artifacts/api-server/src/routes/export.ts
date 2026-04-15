@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, inArray, sql } from "drizzle-orm";
 import { db, questionsTable, chaptersTable, subjectsTable, choicesTable } from "@workspace/db";
-import { generatePdf } from "../lib/pdfExporter";
+import { generatePdf, getPdfRuntimeHealth } from "../lib/pdfExporter";
 import {
   ExportQuestionPdfParams,
   ExportChapterPdfParams,
@@ -10,6 +10,14 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+router.get("/export/health", (_req, res): void => {
+  const health = getPdfRuntimeHealth();
+  res.json({
+    canGeneratePdf: health.canGeneratePdf,
+    browserPath: health.browserPath,
+  });
+});
 
 async function fetchQuestionsWithChoices(questionIds: number[]) {
   if (questionIds.length === 0) return [];

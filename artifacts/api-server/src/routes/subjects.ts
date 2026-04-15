@@ -109,7 +109,22 @@ router.put("/subjects/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json({ ...subject, chapterCount: null, questionCount: null });
+  // Get the updated counts
+  const [updated] = await db
+    .select({
+      id: subjectsTable.id,
+      name: subjectsTable.name,
+      createdAt: subjectsTable.createdAt,
+      chapterCount: sql<number>`cast(count(distinct ${chaptersTable.id}) as int)`,
+      questionCount: sql<number>`cast(count(distinct ${questionsTable.id}) as int)`,
+    })
+    .from(subjectsTable)
+    .leftJoin(chaptersTable, eq(chaptersTable.subjectId, subjectsTable.id))
+    .leftJoin(questionsTable, eq(questionsTable.chapterId, chaptersTable.id))
+    .where(eq(subjectsTable.id, params.data.id))
+    .groupBy(subjectsTable.id, subjectsTable.name, subjectsTable.createdAt);
+
+  res.json(updated || { ...subject, chapterCount: 0, questionCount: 0 });
 });
 
 router.delete("/subjects/:id", async (req, res): Promise<void> => {

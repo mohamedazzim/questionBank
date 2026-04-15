@@ -13,20 +13,47 @@ function findChromium(): string | undefined {
     "/usr/bin/chromium-browser",
     "/usr/bin/google-chrome",
     "/usr/bin/google-chrome-stable",
+    "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+    "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
+    "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
   ];
   for (const c of candidates) {
     if (existsSync(c)) return c;
   }
   try {
-    const which = execSync("which chromium 2>/dev/null || which chromium-browser 2>/dev/null || which google-chrome 2>/dev/null", { encoding: "utf-8" }).trim();
-    if (which && existsSync(which)) return which;
+    if (process.platform === "win32") {
+      const whereOutput = execSync("where chrome.exe", { encoding: "utf-8" }).trim().split(/\r?\n/)[0];
+      if (whereOutput && existsSync(whereOutput)) return whereOutput;
+    } else {
+      const whichOutput = execSync("which chromium 2>/dev/null || which chromium-browser 2>/dev/null || which google-chrome 2>/dev/null", { encoding: "utf-8" }).trim();
+      if (whichOutput && existsSync(whichOutput)) return whichOutput;
+    }
   } catch {
     // ignore
   }
+
+  try {
+    const bundledPath = puppeteer.executablePath();
+    if (bundledPath && existsSync(bundledPath)) return bundledPath;
+  } catch {
+    // ignore
+  }
+
   return undefined;
 }
 
 const CHROMIUM_PATH = findChromium();
+
+export function getPdfRuntimeHealth(): {
+  canGeneratePdf: boolean;
+  browserPath: string | null;
+} {
+  return {
+    canGeneratePdf: Boolean(CHROMIUM_PATH),
+    browserPath: CHROMIUM_PATH ?? null,
+  };
+}
 
 const require = createRequire(import.meta.url);
 const katexJsPath = require.resolve("katex"); // resolves to .../katex/dist/katex.js
@@ -75,7 +102,33 @@ function bufferToBase64DataUri(data: Buffer | null | undefined, mimeType: string
   return `data:${mimeType};base64,${data.toString("base64")}`;
 }
 
+function hasMathDelimiters(text: string): boolean {
+  return /\$\$[\s\S]*?\$\$|\$[^$\n]+\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)/.test(text);
+}
+
+function looksLikeLatexExpression(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+
+  return (
+    /\\[a-zA-Z]+/.test(trimmed) ||
+    /[\^_][{(\w-]/.test(trimmed) ||
+    /\{[^}]*\}/.test(trimmed)
+  );
+}
+
 function renderLatex(text: string): string {
+  if (!hasMathDelimiters(text) && looksLikeLatexExpression(text)) {
+    try {
+      return katex.renderToString(text.trim(), {
+        displayMode: false,
+        throwOnError: false,
+      });
+    } catch {
+      // Fall through to delimiter-based parser below.
+    }
+  }
+
   // Split on $$ (block) and $ (inline) delimiters and render server-side
   let result = "";
   let remaining = text;
@@ -383,9 +436,8 @@ ${katexCss}
 
   let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath: "/run/current-system/sw/bin/chromium",
+    const launchOptions = {
+      headless: true as const,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -394,6 +446,15 @@ ${katexCss}
         "--disable-web-security",
         "--font-render-hinting=none",
       ],
+    };
+
+    if (!CHROMIUM_PATH) {
+      logger.warn("Chromium executable path not found in known locations. Falling back to Puppeteer's default browser.");
+    }
+
+    browser = await puppeteer.launch({
+      ...launchOptions,
+      ...(CHROMIUM_PATH ? { executablePath: CHROMIUM_PATH } : {}),
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });

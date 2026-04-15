@@ -217,14 +217,43 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
     return;
   }
 
-  res.json({
+  // Get the updated question with full details
+  const [updated] = await db
+    .select({
+      id: questionsTable.id,
+      chapterId: questionsTable.chapterId,
+      chapterName: chaptersTable.name,
+      subjectId: chaptersTable.subjectId,
+      subjectName: subjectsTable.name,
+      text: questionsTable.text,
+      type: questionsTable.type,
+      difficulty: questionsTable.difficulty,
+      imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
+      imageName: questionsTable.imageName,
+      imageType: questionsTable.imageType,
+      createdAt: questionsTable.createdAt,
+      choiceCount: sql<number>`cast(count(distinct ${choicesTable.id}) as int)`,
+    })
+    .from(questionsTable)
+    .leftJoin(chaptersTable, eq(chaptersTable.id, questionsTable.chapterId))
+    .leftJoin(subjectsTable, eq(subjectsTable.id, chaptersTable.subjectId))
+    .leftJoin(choicesTable, eq(choicesTable.questionId, questionsTable.id))
+    .where(eq(questionsTable.id, params.data.id))
+    .groupBy(
+      questionsTable.id, questionsTable.chapterId, questionsTable.text,
+      questionsTable.type, questionsTable.difficulty, questionsTable.imageName,
+      questionsTable.imageType, questionsTable.createdAt,
+      chaptersTable.name, chaptersTable.subjectId, subjectsTable.name
+    );
+
+  res.json(updated || {
     ...question,
     imageData: undefined,
     imageUrl: question.imageName ? `/api/questions/${question.id}/image` : null,
     chapterName: null,
     subjectId: null,
     subjectName: null,
-    choiceCount: null,
+    choiceCount: 0,
   });
 });
 
