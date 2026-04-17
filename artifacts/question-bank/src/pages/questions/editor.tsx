@@ -188,8 +188,8 @@ export default function QuestionEditor() {
   useEffect(() => {
     if (isEditing && existingQuestion) {
       const derivedSubjectId =
-        existingQuestion.subjectId ||
-        allChaptersForEdit?.find((c) => c.id === existingQuestion.chapterId)?.subjectId ||
+        existingQuestion.subjectId ??
+        allChaptersForEdit?.find((c) => c.id === existingQuestion.chapterId)?.subjectId ??
         0;
 
       form.reset({
@@ -211,11 +211,45 @@ export default function QuestionEditor() {
     }
   }, [isEditing, existingQuestion, allChaptersForEdit, form]);
 
+  const subjectOptions = (() => {
+    const base = subjects ? [...subjects] : [];
+
+    if (
+      isEditing &&
+      existingQuestion?.subjectId &&
+      !base.some((s) => s.id === existingQuestion.subjectId)
+    ) {
+      base.unshift({
+        id: existingQuestion.subjectId,
+        name: existingQuestion.subjectName || `Subject #${existingQuestion.subjectId}`,
+      } as any);
+    }
+
+    return base;
+  })();
+
   const chapterOptions = chapters && chapters.length > 0
     ? chapters
     : (isEditing && existingQuestion
       ? allChaptersForEdit?.filter((c) => c.id === existingQuestion.chapterId) || []
       : []);
+
+  const chapterOptionsWithFallback = (() => {
+    const base = chapterOptions ? [...chapterOptions] : [];
+
+    if (
+      isEditing &&
+      existingQuestion?.chapterId &&
+      !base.some((c) => c.id === existingQuestion.chapterId)
+    ) {
+      base.unshift({
+        id: existingQuestion.chapterId,
+        name: existingQuestion.chapterName || `Chapter #${existingQuestion.chapterId}`,
+      } as any);
+    }
+
+    return base;
+  })();
 
   const onSubmit = async (data: QuestionFormValues) => {
     try {
@@ -379,8 +413,8 @@ export default function QuestionEditor() {
 
     // Local preview for unsaved or current form state
     const currentValues = form.getValues();
-    const sub = subjects?.find(s => s.id === currentValues.subjectId);
-    const ch = chapters?.find(c => c.id === currentValues.chapterId);
+    const sub = subjectOptions.find(s => s.id === currentValues.subjectId);
+    const ch = chapterOptionsWithFallback.find(c => c.id === currentValues.chapterId);
 
     return (
       <div className="h-full overflow-y-auto bg-card p-8 border-l">
@@ -489,7 +523,7 @@ export default function QuestionEditor() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {subjects?.map(s => (
+                                  {subjectOptions.map(s => (
                                     <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
                                   ))}
                                 </SelectContent>
@@ -507,7 +541,7 @@ export default function QuestionEditor() {
                               <Select 
                                 onValueChange={(v) => field.onChange(Number(v))} 
                                 value={field.value ? field.value.toString() : ""}
-                                disabled={!watchSubjectId || chapterOptions.length === 0}
+                                disabled={!watchSubjectId || chapterOptionsWithFallback.length === 0}
                               >
                                 <FormControl>
                                   <SelectTrigger>
@@ -515,7 +549,7 @@ export default function QuestionEditor() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {chapterOptions.map(c => (
+                                  {chapterOptionsWithFallback.map(c => (
                                     <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                                   ))}
                                 </SelectContent>
