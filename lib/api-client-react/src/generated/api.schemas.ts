@@ -60,6 +60,15 @@ export const QuestionDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type QuestionVerificationStatus =
+  (typeof QuestionVerificationStatus)[keyof typeof QuestionVerificationStatus];
+
+export const QuestionVerificationStatus = {
+  Verified: "Verified",
+  Need_to_Verified: "Need to Verified",
+  Changes_Needed: "Changes Needed",
+} as const;
+
 export interface Question {
   id: number;
   chapterId: number;
@@ -72,6 +81,7 @@ export interface Question {
   text: string;
   type: QuestionType;
   difficulty: QuestionDifficulty;
+  verificationStatus?: QuestionVerificationStatus;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
@@ -109,11 +119,21 @@ export const CreateQuestionBodyDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type CreateQuestionBodyVerificationStatus =
+  (typeof CreateQuestionBodyVerificationStatus)[keyof typeof CreateQuestionBodyVerificationStatus];
+
+export const CreateQuestionBodyVerificationStatus = {
+  Verified: "Verified",
+  Need_to_Verified: "Need to Verified",
+  Changes_Needed: "Changes Needed",
+} as const;
+
 export interface CreateQuestionBody {
   chapterId: number;
   text?: string;
   type: CreateQuestionBodyType;
   difficulty: CreateQuestionBodyDifficulty;
+  verificationStatus: CreateQuestionBodyVerificationStatus;
   image?: Blob;
 }
 
@@ -135,6 +155,15 @@ export const UpdateQuestionBodyDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type UpdateQuestionBodyVerificationStatus =
+  (typeof UpdateQuestionBodyVerificationStatus)[keyof typeof UpdateQuestionBodyVerificationStatus];
+
+export const UpdateQuestionBodyVerificationStatus = {
+  Verified: "Verified",
+  Need_to_Verified: "Need to Verified",
+  Changes_Needed: "Changes Needed",
+} as const;
+
 export type UpdateQuestionBodyRemoveImage =
   (typeof UpdateQuestionBodyRemoveImage)[keyof typeof UpdateQuestionBodyRemoveImage];
 
@@ -148,6 +177,7 @@ export interface UpdateQuestionBody {
   text?: string;
   type?: UpdateQuestionBodyType;
   difficulty?: UpdateQuestionBodyDifficulty;
+  verificationStatus?: UpdateQuestionBodyVerificationStatus;
   image?: Blob;
   removeImage?: UpdateQuestionBodyRemoveImage;
 }
@@ -204,6 +234,15 @@ export const QuestionDetailDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type QuestionDetailVerificationStatus =
+  (typeof QuestionDetailVerificationStatus)[keyof typeof QuestionDetailVerificationStatus];
+
+export const QuestionDetailVerificationStatus = {
+  Verified: "Verified",
+  Need_to_Verified: "Need to Verified",
+  Changes_Needed: "Changes Needed",
+} as const;
+
 export interface QuestionDetail {
   id: number;
   chapterId: number;
@@ -216,6 +255,7 @@ export interface QuestionDetail {
   text: string;
   type: QuestionDetailType;
   difficulty: QuestionDetailDifficulty;
+  verificationStatus?: QuestionDetailVerificationStatus;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
@@ -254,11 +294,21 @@ export const QuestionPreviewDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type QuestionPreviewVerificationStatus =
+  (typeof QuestionPreviewVerificationStatus)[keyof typeof QuestionPreviewVerificationStatus];
+
+export const QuestionPreviewVerificationStatus = {
+  Verified: "Verified",
+  Need_to_Verified: "Need to Verified",
+  Changes_Needed: "Changes Needed",
+} as const;
+
 export interface QuestionPreview {
   id: number;
   text: string;
   type: QuestionPreviewType;
   difficulty: QuestionPreviewDifficulty;
+  verificationStatus?: QuestionPreviewVerificationStatus;
   /** @nullable */
   chapterName?: string | null;
   /** @nullable */
@@ -313,6 +363,7 @@ export type ListQuestionsParams = {
   search?: string;
   difficulty?: ListQuestionsDifficulty;
   type?: ListQuestionsType;
+  verificationStatus?: ListQuestionsVerificationStatus;
   page?: number;
   limit?: number;
 };
@@ -333,4 +384,13 @@ export type ListQuestionsType =
 export const ListQuestionsType = {
   MCQ: "MCQ",
   FILLUP: "FILLUP",
+} as const;
+
+export type ListQuestionsVerificationStatus =
+  (typeof ListQuestionsVerificationStatus)[keyof typeof ListQuestionsVerificationStatus];
+
+export const ListQuestionsVerificationStatus = {
+  Verified: "Verified",
+  Need_to_Verified: "Need to Verified",
+  Changes_Needed: "Changes Needed",
 } as const;

@@ -7,11 +7,13 @@
  */
 import type { CreateQuestionBodyDifficulty } from "./createQuestionBodyDifficulty";
 import type { CreateQuestionBodyType } from "./createQuestionBodyType";
+import type { CreateQuestionBodyVerificationStatus } from "./createQuestionBodyVerificationStatus";
 
 export interface CreateQuestionBody {
   chapterId: number;
   text?: string;
   type: CreateQuestionBodyType;
   difficulty: CreateQuestionBodyDifficulty;
+  verificationStatus: CreateQuestionBodyVerificationStatus;
   image?: Blob;
 }

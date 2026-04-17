@@ -23,6 +23,7 @@ export const questionsTable = pgTable("questions", {
   text: text("text").notNull(),
   type: text("type", { enum: ["MCQ", "FILLUP"] }).notNull().default("MCQ"),
   difficulty: text("difficulty", { enum: ["EASY", "MEDIUM", "HARD", "UNLABLED"] }).notNull().default("MEDIUM"),
+  verificationStatus: text("verification_status", { enum: ["Verified", "Need to Verified", "Changes Needed"] }).notNull().default("Need to Verified"),
   imageData: bytea("image_data"),
   imageName: text("image_name"),
   imageType: text("image_type"),

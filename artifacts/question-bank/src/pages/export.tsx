@@ -32,6 +32,8 @@ export default function Export() {
   // For selected questions
   const [filterSubjectId, setFilterSubjectId] = useState<string>("all");
   const [filterChapterId, setFilterChapterId] = useState<string>("all");
+  const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
   const [previewQuestionId, setPreviewQuestionId] = useState<number>(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -75,11 +77,13 @@ export default function Export() {
   const { data: questionsData } = useListQuestions({
     subjectId: filterSubjectId !== "all" ? Number(filterSubjectId) : undefined,
     chapterId: filterChapterId !== "all" ? Number(filterChapterId) : undefined,
+    difficulty: filterDifficulty !== "all" ? (filterDifficulty as any) : undefined,
+    type: filterType !== "all" ? (filterType as any) : undefined,
     limit: 100 // Loading up to 100 for easy selection in this demo
   }, {
     query: {
       enabled: exportType === "selected",
-      queryKey: ["listQuestions", filterSubjectId, filterChapterId]
+      queryKey: ["listQuestions", filterSubjectId, filterChapterId, filterDifficulty, filterType]
     }
   });
 
@@ -311,6 +315,34 @@ export default function Export() {
                       {filterChapters?.map(c => (
                         <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <label className="text-sm font-medium">Filter by Difficulty</label>
+                  <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Difficulties" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Difficulties</SelectItem>
+                      <SelectItem value="EASY">Easy</SelectItem>
+                      <SelectItem value="MEDIUM">Medium</SelectItem>
+                      <SelectItem value="HARD">Hard</SelectItem>
+                      <SelectItem value="UNLABLED">Unlabled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <label className="text-sm font-medium">Filter by Type</label>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="MCQ">Multiple Choice</SelectItem>
+                      <SelectItem value="FILLUP">Fill in the Blanks</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

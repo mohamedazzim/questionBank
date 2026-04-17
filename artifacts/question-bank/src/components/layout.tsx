@@ -7,6 +7,7 @@ import {
   BookOpen, 
   FileQuestion, 
   Download,
+  Tags,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { name: "Subjects", href: "/subjects", icon: Library },
     { name: "Chapters", href: "/chapters", icon: BookOpen },
     { name: "Questions", href: "/questions", icon: FileQuestion },
+    { name: "Preview and Labelling", href: "/preview-labelling", icon: Tags },
     { name: "Export", href: "/export", icon: Download },
   ];
 

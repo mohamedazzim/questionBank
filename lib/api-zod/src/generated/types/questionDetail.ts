@@ -8,6 +8,7 @@
 import type { Choice } from "./choice";
 import type { QuestionDetailDifficulty } from "./questionDetailDifficulty";
 import type { QuestionDetailType } from "./questionDetailType";
+import type { QuestionDetailVerificationStatus } from "./questionDetailVerificationStatus";
 
 export interface QuestionDetail {
   id: number;
@@ -21,6 +22,7 @@ export interface QuestionDetail {
   text: string;
   type: QuestionDetailType;
   difficulty: QuestionDetailDifficulty;
+  verificationStatus?: QuestionDetailVerificationStatus;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */

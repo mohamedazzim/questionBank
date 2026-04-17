@@ -305,6 +305,11 @@ paths:
           schema:
             type: string
             enum: [MCQ, FILLUP]
+        - name: verificationStatus
+          in: query
+          schema:
+            type: string
+            enum: [Verified, "Need to Verified", "Changes Needed"]
         - name: page
           in: query
           schema:
@@ -809,6 +814,9 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        verificationStatus:
+          type: string
+          enum: [Verified, "Need to Verified", "Changes Needed"]
         imageUrl:
           type: ["string", "null"]
         imageName:
@@ -863,6 +871,10 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        verificationStatus:
+          type: string
+          enum: [Verified, "Need to Verified", "Changes Needed"]
+          default: "Need to Verified"
         image:
           type: string
           format: binary
@@ -870,6 +882,7 @@ components:
         - chapterId
         - type
         - difficulty
+        - verificationStatus
 
     UpdateQuestionBody:
       type: object
@@ -884,6 +897,9 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        verificationStatus:
+          type: string
+          enum: [Verified, "Need to Verified", "Changes Needed"]
         image:
           type: string
           format: binary
@@ -967,6 +983,9 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        verificationStatus:
+          type: string
+          enum: [Verified, "Need to Verified", "Changes Needed"]
         imageUrl:
           type: ["string", "null"]
         imageName:
@@ -1020,6 +1039,9 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        verificationStatus:
+          type: string
+          enum: [Verified, "Need to Verified", "Changes Needed"]
         chapterName:
           type: ["string", "null"]
         subjectName:

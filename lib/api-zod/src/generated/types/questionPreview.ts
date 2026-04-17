@@ -8,12 +8,14 @@
 import type { ChoicePreview } from "./choicePreview";
 import type { QuestionPreviewDifficulty } from "./questionPreviewDifficulty";
 import type { QuestionPreviewType } from "./questionPreviewType";
+import type { QuestionPreviewVerificationStatus } from "./questionPreviewVerificationStatus";
 
 export interface QuestionPreview {
   id: number;
   text: string;
   type: QuestionPreviewType;
   difficulty: QuestionPreviewDifficulty;
+  verificationStatus?: QuestionPreviewVerificationStatus;
   /** @nullable */
   chapterName?: string | null;
   /** @nullable */

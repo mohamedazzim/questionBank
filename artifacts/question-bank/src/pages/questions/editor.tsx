@@ -67,6 +67,7 @@ const questionSchema = z.object({
   text: z.string(),
   type: z.enum(["MCQ", "FILLUP"]),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
+  verificationStatus: z.enum(["Verified", "Need to Verified", "Changes Needed"]),
   image: z.instanceof(File).optional(),
   removeImage: z.boolean().optional(),
   _localPreview: z.string().optional(),
@@ -156,6 +157,7 @@ export default function QuestionEditor() {
       text: "",
       type: "MCQ",
       difficulty: "MEDIUM",
+      verificationStatus: "Need to Verified",
       choices: [
         { text: "", isCorrect: true },
         { text: "", isCorrect: false },
@@ -172,6 +174,10 @@ export default function QuestionEditor() {
   const watchType = form.watch("type");
   const watchChoices = form.watch("choices");
 
+  const { data: allChaptersForEdit } = useListChapters({}, {
+    query: { enabled: isEditing, queryKey: ["listChapters", "all-for-editor"] }
+  });
+
   const { data: chapters } = useListChapters({
     subjectId: watchSubjectId ? Number(watchSubjectId) : undefined
   }, {
@@ -181,12 +187,18 @@ export default function QuestionEditor() {
   // Populate form when editing
   useEffect(() => {
     if (isEditing && existingQuestion) {
+      const derivedSubjectId =
+        existingQuestion.subjectId ||
+        allChaptersForEdit?.find((c) => c.id === existingQuestion.chapterId)?.subjectId ||
+        0;
+
       form.reset({
-        subjectId: existingQuestion.subjectId || 0,
+        subjectId: derivedSubjectId,
         chapterId: existingQuestion.chapterId,
         text: existingQuestion.text,
         type: existingQuestion.type,
         difficulty: existingQuestion.difficulty,
+        verificationStatus: (existingQuestion as any).verificationStatus || "Need to Verified",
         _localPreview: existingQuestion.imageUrl || undefined,
         choices: (existingQuestion as any).choices?.map((c: any) => ({
           id: c.id,
@@ -197,7 +209,13 @@ export default function QuestionEditor() {
         })) || []
       });
     }
-  }, [isEditing, existingQuestion, form]);
+  }, [isEditing, existingQuestion, allChaptersForEdit, form]);
+
+  const chapterOptions = chapters && chapters.length > 0
+    ? chapters
+    : (isEditing && existingQuestion
+      ? allChaptersForEdit?.filter((c) => c.id === existingQuestion.chapterId) || []
+      : []);
 
   const onSubmit = async (data: QuestionFormValues) => {
     try {
@@ -209,6 +227,7 @@ export default function QuestionEditor() {
           text: normalizedQuestionText,
           type: data.type,
           difficulty: data.difficulty,
+          verificationStatus: data.verificationStatus,
         };
         if (data.image) qData.image = data.image;
         if (data.removeImage) qData.removeImage = "true";
@@ -258,6 +277,7 @@ export default function QuestionEditor() {
           text: normalizedQuestionText,
           type: data.type,
           difficulty: data.difficulty,
+          verificationStatus: data.verificationStatus,
         };
         if (data.image) qData.image = data.image;
 
@@ -373,6 +393,7 @@ export default function QuestionEditor() {
                 <Badge variant={getDifficultyBadgeVariant(currentValues.difficulty)}>
                   {currentValues.difficulty}
                 </Badge>
+                <Badge variant="outline">{currentValues.verificationStatus}</Badge>
               </div>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setPreviewMode(false)}>
@@ -486,7 +507,7 @@ export default function QuestionEditor() {
                               <Select 
                                 onValueChange={(v) => field.onChange(Number(v))} 
                                 value={field.value ? field.value.toString() : ""}
-                                disabled={!watchSubjectId || chapters?.length === 0}
+                                disabled={!watchSubjectId || chapterOptions.length === 0}
                               >
                                 <FormControl>
                                   <SelectTrigger>
@@ -494,7 +515,7 @@ export default function QuestionEditor() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {chapters?.map(c => (
+                                  {chapterOptions.map(c => (
                                     <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                                   ))}
                                 </SelectContent>
@@ -544,6 +565,28 @@ export default function QuestionEditor() {
                                   <SelectItem value="MEDIUM">Medium</SelectItem>
                                   <SelectItem value="HARD">Hard</SelectItem>
                                   <SelectItem value="UNLABLED">Unlabled</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="verificationStatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Verification Tag</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Verified">Verified</SelectItem>
+                                  <SelectItem value="Need to Verified">Need to Verified</SelectItem>
+                                  <SelectItem value="Changes Needed">Changes Needed</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />

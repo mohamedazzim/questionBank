@@ -1114,6 +1114,7 @@ export const createQuestion = async (
   }
   formData.append(`type`, createQuestionBody.type);
   formData.append(`difficulty`, createQuestionBody.difficulty);
+  formData.append(`verificationStatus`, createQuestionBody.verificationStatus);
   if (createQuestionBody.image !== undefined) {
     formData.append(`image`, createQuestionBody.image);
   }
@@ -1303,6 +1304,12 @@ export const updateQuestion = async (
   }
   if (updateQuestionBody.difficulty !== undefined) {
     formData.append(`difficulty`, updateQuestionBody.difficulty);
+  }
+  if (updateQuestionBody.verificationStatus !== undefined) {
+    formData.append(
+      `verificationStatus`,
+      updateQuestionBody.verificationStatus,
+    );
   }
   if (updateQuestionBody.image !== undefined) {
     formData.append(`image`, updateQuestionBody.image);

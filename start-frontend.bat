@@ -13,8 +13,8 @@ REM Set environment variables
 set PORT=3000
 set BASE_PATH=/
 
-echo ✓ Port: 3000
-echo ✓ Base Path: /
+echo [OK] Port: 3000
+echo [OK] Base Path: /
 echo.
 
 REM Start frontend dev server
@@ -23,6 +23,6 @@ pnpm --filter @workspace/question-bank run dev
 REM Keep window open if there's an error
 if %errorlevel% neq 0 (
   echo.
-  echo ✗ Server exited with error: %errorlevel%
+  echo [ERROR] Server exited with error: %errorlevel%
   pause
 )

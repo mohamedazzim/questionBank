@@ -53,6 +53,7 @@ export default function Questions() {
   const [chapterId, setChapterId] = useState<string>("all");
   const [difficulty, setDifficulty] = useState<string>("all");
   const [type, setType] = useState<string>("all");
+  const [verificationStatus, setVerificationStatus] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -88,6 +89,7 @@ export default function Questions() {
     chapterId: chapterId !== "all" ? Number(chapterId) : undefined,
     difficulty: difficulty !== "all" ? difficulty as any : undefined,
     type: type !== "all" ? type as any : undefined,
+    verificationStatus: verificationStatus !== "all" ? verificationStatus as any : undefined,
     page,
     limit: 10
   };
@@ -125,7 +127,7 @@ export default function Questions() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -181,6 +183,18 @@ export default function Questions() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="MCQ">Multiple Choice</SelectItem>
             <SelectItem value="FILLUP">Fill in the Blanks</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={verificationStatus} onValueChange={(val) => { setVerificationStatus(val); setPage(1); }}>
+          <SelectTrigger>
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="Verified">Verified</SelectItem>
+            <SelectItem value="Need to Verified">Need to Verified</SelectItem>
+            <SelectItem value="Changes Needed">Changes Needed</SelectItem>
           </SelectContent>
         </Select>
       </div>

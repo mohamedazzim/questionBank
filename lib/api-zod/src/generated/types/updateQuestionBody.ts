@@ -8,12 +8,14 @@
 import type { UpdateQuestionBodyDifficulty } from "./updateQuestionBodyDifficulty";
 import type { UpdateQuestionBodyRemoveImage } from "./updateQuestionBodyRemoveImage";
 import type { UpdateQuestionBodyType } from "./updateQuestionBodyType";
+import type { UpdateQuestionBodyVerificationStatus } from "./updateQuestionBodyVerificationStatus";
 
 export interface UpdateQuestionBody {
   chapterId?: number;
   text?: string;
   type?: UpdateQuestionBodyType;
   difficulty?: UpdateQuestionBodyDifficulty;
+  verificationStatus?: UpdateQuestionBodyVerificationStatus;
   image?: Blob;
   removeImage?: UpdateQuestionBodyRemoveImage;
 }

@@ -7,6 +7,7 @@
  */
 import type { ListQuestionsDifficulty } from "./listQuestionsDifficulty";
 import type { ListQuestionsType } from "./listQuestionsType";
+import type { ListQuestionsVerificationStatus } from "./listQuestionsVerificationStatus";
 
 export type ListQuestionsParams = {
   chapterId?: number;
@@ -14,6 +15,7 @@ export type ListQuestionsParams = {
   search?: string;
   difficulty?: ListQuestionsDifficulty;
   type?: ListQuestionsType;
+  verificationStatus?: ListQuestionsVerificationStatus;
   page?: number;
   limit?: number;
 };

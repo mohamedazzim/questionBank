@@ -7,6 +7,7 @@
  */
 import type { QuestionDifficulty } from "./questionDifficulty";
 import type { QuestionType } from "./questionType";
+import type { QuestionVerificationStatus } from "./questionVerificationStatus";
 
 export interface Question {
   id: number;
@@ -20,6 +21,7 @@ export interface Question {
   text: string;
   type: QuestionType;
   difficulty: QuestionDifficulty;
+  verificationStatus?: QuestionVerificationStatus;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */

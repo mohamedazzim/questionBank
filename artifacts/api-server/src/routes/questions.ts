@@ -14,6 +14,7 @@ import { upload } from "../lib/multer";
 const router: IRouter = Router();
 const VALID_QUESTION_TYPES = ["MCQ", "FILLUP"];
 const VALID_DIFFICULTIES = ["EASY", "MEDIUM", "HARD", "UNLABLED"];
+const VALID_VERIFICATION_STATUSES = ["Verified", "Need to Verified", "Changes Needed"];
 
 const normalizeText = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
 
@@ -24,7 +25,7 @@ router.get("/questions", async (req, res): Promise<void> => {
     return;
   }
 
-  const { chapterId, subjectId, search, difficulty, type, page = 1, limit = 20 } = query.data;
+  const { chapterId, subjectId, search, difficulty, type, verificationStatus, page = 1, limit = 20 } = query.data;
   const offset = (page - 1) * limit;
 
   const conditions = [];
@@ -33,6 +34,7 @@ router.get("/questions", async (req, res): Promise<void> => {
   if (search) conditions.push(ilike(questionsTable.text, `%${search}%`));
   if (difficulty) conditions.push(eq(questionsTable.difficulty, difficulty));
   if (type) conditions.push(eq(questionsTable.type, type));
+  if (verificationStatus) conditions.push(eq(questionsTable.verificationStatus, verificationStatus));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -52,6 +54,7 @@ router.get("/questions", async (req, res): Promise<void> => {
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
+      verificationStatus: questionsTable.verificationStatus,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -65,7 +68,7 @@ router.get("/questions", async (req, res): Promise<void> => {
     .where(whereClause)
     .groupBy(
       questionsTable.id, questionsTable.chapterId, questionsTable.text,
-      questionsTable.type, questionsTable.difficulty, questionsTable.imageName,
+      questionsTable.type, questionsTable.difficulty, questionsTable.verificationStatus, questionsTable.imageName,
       questionsTable.imageType, questionsTable.createdAt,
       chaptersTable.name, chaptersTable.subjectId, subjectsTable.name
     )
@@ -93,13 +96,15 @@ router.post("/questions", upload.single("image"), async (req, res): Promise<void
     return;
   }
 
+  const verificationStatus = body.verificationStatus || "Need to Verified";
+
   if (!normalizedText && !imageFile) {
     res.status(400).json({ error: "Question must include text or an image" });
     return;
   }
 
-  if (!VALID_QUESTION_TYPES.includes(body.type) || !VALID_DIFFICULTIES.includes(body.difficulty)) {
-    res.status(400).json({ error: "Invalid type or difficulty" });
+  if (!VALID_QUESTION_TYPES.includes(body.type) || !VALID_DIFFICULTIES.includes(body.difficulty) || !VALID_VERIFICATION_STATUSES.includes(verificationStatus)) {
+    res.status(400).json({ error: "Invalid type, difficulty, or verificationStatus" });
     return;
   }
 
@@ -117,6 +122,7 @@ router.post("/questions", upload.single("image"), async (req, res): Promise<void
       text: normalizedText,
       type: body.type,
       difficulty: body.difficulty,
+      verificationStatus,
       imageData: imageFile ? imageFile.buffer : null,
       imageName: imageFile ? imageFile.originalname : null,
       imageType: imageFile ? imageFile.mimetype : null,
@@ -153,6 +159,7 @@ router.get("/questions/:id", async (req, res): Promise<void> => {
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
+      verificationStatus: questionsTable.verificationStatus,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -222,6 +229,11 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
     return;
   }
 
+  if (body.verificationStatus && !VALID_VERIFICATION_STATUSES.includes(body.verificationStatus)) {
+    res.status(400).json({ error: "Invalid verificationStatus" });
+    return;
+  }
+
   if (body.chapterId) {
     const nextChapterId = parseInt(body.chapterId, 10);
     if (Number.isNaN(nextChapterId)) {
@@ -247,6 +259,7 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
   if (body.text != null) updateData.text = normalizeText(body.text);
   if (body.type) updateData.type = body.type;
   if (body.difficulty) updateData.difficulty = body.difficulty;
+  if (body.verificationStatus) updateData.verificationStatus = body.verificationStatus;
   if (body.chapterId) updateData.chapterId = parseInt(body.chapterId, 10);
 
   if (imageFile) {
@@ -283,6 +296,7 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
+      verificationStatus: questionsTable.verificationStatus,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -296,7 +310,7 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
     .where(eq(questionsTable.id, params.data.id))
     .groupBy(
       questionsTable.id, questionsTable.chapterId, questionsTable.text,
-      questionsTable.type, questionsTable.difficulty, questionsTable.imageName,
+      questionsTable.type, questionsTable.difficulty, questionsTable.verificationStatus, questionsTable.imageName,
       questionsTable.imageType, questionsTable.createdAt,
       chaptersTable.name, chaptersTable.subjectId, subjectsTable.name
     );
@@ -370,6 +384,7 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
+      verificationStatus: questionsTable.verificationStatus,
       chapterName: chaptersTable.name,
       subjectName: subjectsTable.name,
       imageData: questionsTable.imageData,
@@ -396,6 +411,7 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
     text: question.text,
     type: question.type,
     difficulty: question.difficulty,
+    verificationStatus: question.verificationStatus,
     chapterName: question.chapterName,
     subjectName: question.subjectName,
     imageData: question.imageData ? question.imageData.toString("base64") : null,

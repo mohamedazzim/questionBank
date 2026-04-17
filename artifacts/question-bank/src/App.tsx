@@ -11,6 +11,7 @@ import Chapters from "@/pages/chapters";
 import Questions from "@/pages/questions";
 import QuestionEditor from "@/pages/questions/editor";
 import Export from "@/pages/export";
+import PreviewAndLabelling from "@/pages/preview-labelling";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ function Router() {
         <Route path="/questions" component={Questions} />
         <Route path="/questions/new" component={QuestionEditor} />
         <Route path="/questions/:id/edit" component={QuestionEditor} />
+        <Route path="/preview-labelling" component={PreviewAndLabelling} />
         <Route path="/export" component={Export} />
         <Route component={NotFound} />
       </Switch>

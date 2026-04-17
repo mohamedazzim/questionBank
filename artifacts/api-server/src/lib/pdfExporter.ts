@@ -220,6 +220,7 @@ function escapeHtml(text: string): string {
 
 export async function generatePdf(questions: QuestionForPdf[], title: string): Promise<Buffer> {
   logger.info({ count: questions.length }, "Generating PDF");
+  const isSingleQuestionExport = questions.length === 1;
 
   const questionsHtml = questions.map((q, index) => {
     const questionImageSrc = bufferToBase64DataUri(q.imageData, q.imageType);
@@ -287,26 +288,8 @@ ${katexCss}
       padding: 0;
     }
     
-    .cover {
-      padding: 60px 50px;
-      border-bottom: 3px solid #1a1a2e;
-      margin-bottom: 30px;
-    }
-    
-    .cover h1 {
-      font-size: 24pt;
-      font-weight: 700;
-      color: #1a1a2e;
-      margin-bottom: 8px;
-    }
-    
-    .cover .subtitle {
-      font-size: 11pt;
-      color: #666;
-    }
-    
     .content {
-      padding: 20px 50px 50px;
+      padding: 10px 40px 20px;
     }
     
     .question-block {
@@ -314,8 +297,8 @@ ${katexCss}
       padding: 20px;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      page-break-inside: auto;
+      break-inside: auto;
     }
     
     .question-header {
@@ -387,6 +370,8 @@ ${katexCss}
       border: 1px solid #e5e7eb;
       border-radius: 6px;
       background: #fafafa;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
     .choice-main {
@@ -439,17 +424,9 @@ ${katexCss}
     }
     
     .katex-display { overflow-x: auto; }
-
-    @media print {
-      .question-block { break-inside: avoid; }
-    }
   </style>
 </head>
-<body>
-  <div class="cover">
-    <h1>${escapeHtml(title)}</h1>
-    <div class="subtitle">Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} · ${questions.length} question${questions.length !== 1 ? "s" : ""}</div>
-  </div>
+<body class="${isSingleQuestionExport ? "single-question" : ""}">
   <div class="content">
     ${questionsHtml}
   </div>
@@ -483,7 +460,9 @@ ${katexCss}
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
+      margin: isSingleQuestionExport
+        ? { top: "8mm", bottom: "8mm", left: "10mm", right: "10mm" }
+        : { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
     });
     return Buffer.from(pdfBuffer);
   } finally {
