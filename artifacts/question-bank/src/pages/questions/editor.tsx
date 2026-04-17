@@ -47,9 +47,13 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Eye, Trash2, Plus, Image as ImageIcon, X } from "lucide-react";
 import { LatexRenderer } from "@/components/latex-renderer";
 
+const hasText = (value?: string | null) => Boolean(value?.trim());
+const hasImage = (image?: File, preview?: string | null, removeImage?: boolean) =>
+  Boolean(image) || (Boolean(preview) && !removeImage);
+
 const choiceSchema = z.object({
   id: z.number().optional(),
-  text: z.string().min(1, "Choice text is required"),
+  text: z.string(),
   isCorrect: z.boolean(),
   image: z.instanceof(File).optional(),
   imageUrl: z.string().optional().nullable(),
@@ -60,23 +64,56 @@ const choiceSchema = z.object({
 const questionSchema = z.object({
   subjectId: z.coerce.number().min(1, "Subject is required"),
   chapterId: z.coerce.number().min(1, "Chapter is required"),
-  text: z.string().min(1, "Question text is required"),
+  text: z.string(),
   type: z.enum(["MCQ", "FILLUP"]),
-  difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
+  difficulty: z.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
   image: z.instanceof(File).optional(),
   removeImage: z.boolean().optional(),
   _localPreview: z.string().optional(),
   choices: z.array(choiceSchema).optional(),
-}).refine(data => {
-  if (data.type === "MCQ") {
-    if (!data.choices || data.choices.length < 2) return false;
-    const correctCount = data.choices.filter(c => c.isCorrect).length;
-    if (correctCount !== 1) return false;
+}).superRefine((data, ctx) => {
+  if (!hasText(data.text) && !hasImage(data.image, data._localPreview, data.removeImage)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide question text or upload a question image.",
+      path: ["text"],
+    });
   }
-  return true;
-}, {
-  message: "MCQ questions must have at least 2 choices and exactly 1 correct answer.",
-  path: ["choices"]
+
+  if (data.type === "MCQ") {
+    if (!data.choices || data.choices.length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "MCQ questions must have at least 2 choices.",
+        path: ["choices"],
+      });
+      return;
+    }
+
+    const correctCount = data.choices.filter(c => c.isCorrect).length;
+    if (correctCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "MCQ questions must have exactly 1 correct answer.",
+        path: ["choices"],
+      });
+    }
+
+    data.choices.forEach((choice, index) => {
+      const choiceHasImage = hasImage(
+        choice.image,
+        choice._localPreview ?? choice.imageUrl,
+        choice.removeImage,
+      );
+      if (!hasText(choice.text) && !choiceHasImage) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Each choice needs text or an image.",
+          path: ["choices", index, "text"],
+        });
+      }
+    });
+  }
 });
 
 type QuestionFormValues = z.infer<typeof questionSchema>;
@@ -92,6 +129,13 @@ export default function QuestionEditor() {
 
   const [previewMode, setPreviewMode] = useState(false);
   const [showPreviewPanel, setShowPreviewPanel] = useState(true);
+
+  const getDifficultyBadgeVariant = (difficulty: string): "default" | "secondary" | "destructive" | "outline" => {
+    if (difficulty === "HARD") return "destructive";
+    if (difficulty === "MEDIUM") return "default";
+    if (difficulty === "UNLABLED") return "outline";
+    return "secondary";
+  };
   
   const { data: subjects } = useListSubjects();
   const { data: existingQuestion, isLoading: isLoadingQuestion } = useGetQuestion(questionId, {
@@ -159,9 +203,10 @@ export default function QuestionEditor() {
     try {
       if (isEditing) {
         // Update question
+        const normalizedQuestionText = data.text.trim();
         const qData: any = {
           chapterId: data.chapterId,
-          text: data.text,
+          text: normalizedQuestionText,
           type: data.type,
           difficulty: data.difficulty,
         };
@@ -185,7 +230,7 @@ export default function QuestionEditor() {
           for (const c of data.choices) {
             if (c.id) {
               const cData: any = {
-                text: c.text,
+                text: c.text.trim(),
                 isCorrect: c.isCorrect,
               };
               if (c.image) cData.image = c.image;
@@ -194,7 +239,7 @@ export default function QuestionEditor() {
             } else {
               const cData: any = {
                 questionId,
-                text: c.text,
+                text: c.text.trim(),
                 isCorrect: c.isCorrect,
               };
               if (c.image) cData.image = c.image;
@@ -207,9 +252,10 @@ export default function QuestionEditor() {
         setLocation("/questions");
       } else {
         // Create new question
+        const normalizedQuestionText = data.text.trim();
         const qData: any = {
           chapterId: data.chapterId,
-          text: data.text,
+          text: normalizedQuestionText,
           type: data.type,
           difficulty: data.difficulty,
         };
@@ -221,7 +267,7 @@ export default function QuestionEditor() {
           for (const c of data.choices) {
             const cData: any = {
               questionId: newQuestion.id,
-              text: c.text,
+              text: c.text.trim(),
               isCorrect: c.isCorrect,
             };
             if (c.image) cData.image = c.image;
@@ -324,7 +370,7 @@ export default function QuestionEditor() {
               <div className="text-sm text-muted-foreground">{sub?.name || 'Subject'} &gt; {ch?.name || 'Chapter'}</div>
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant="outline">{currentValues.type}</Badge>
-                <Badge variant={currentValues.difficulty === 'HARD' ? 'destructive' : currentValues.difficulty === 'MEDIUM' ? 'default' : 'secondary'}>
+                <Badge variant={getDifficultyBadgeVariant(currentValues.difficulty)}>
                   {currentValues.difficulty}
                 </Badge>
               </div>
@@ -497,6 +543,7 @@ export default function QuestionEditor() {
                                   <SelectItem value="EASY">Easy</SelectItem>
                                   <SelectItem value="MEDIUM">Medium</SelectItem>
                                   <SelectItem value="HARD">Hard</SelectItem>
+                                  <SelectItem value="UNLABLED">Unlabled</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -514,7 +561,7 @@ export default function QuestionEditor() {
                           <FormItem>
                             <FormLabel>Question Text</FormLabel>
                             <FormDescription>
-                              Use $...$ for inline math and $$...$$ for block math.
+                              Use $...$ for inline math and $$...$$ for block math. Text is optional if you upload a question image.
                             </FormDescription>
                             <FormControl>
                               <Textarea 
@@ -601,7 +648,7 @@ export default function QuestionEditor() {
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormControl>
-                                        <Input placeholder={`Choice ${index + 1} text...`} {...field} />
+                                        <Input placeholder={`Choice ${index + 1} text (optional if image is uploaded)...`} {...field} />
                                       </FormControl>
                                       <FormMessage />
                                     </FormItem>

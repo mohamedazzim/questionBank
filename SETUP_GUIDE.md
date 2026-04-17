@@ -1,264 +1,173 @@
-# Question Bank Pro - Setup Guide
+# Question Bank Pro - Windows Setup and Deployment Guide
 
-## Prerequisites
+This guide is for a new Windows machine and includes copy-paste commands.
 
-- Node.js 24 (installed ✅)
-- PostgreSQL 12+ 
-- pnpm (the monorepo package manager - installed ✅)
+## 1. Prerequisites
 
-## Database Setup
+Install these first:
 
-### Option 1: Using PostgreSQL Locally (Windows)
+1. Node.js LTS (v20 or newer): https://nodejs.org
+2. PostgreSQL 14+ (local) or Neon cloud database: https://www.postgresql.org / https://neon.tech
+3. Git: https://git-scm.com
 
-1. **Install PostgreSQL**
-   - Download from https://www.postgresql.org/download/windows/
-   - Install with default settings (port 5432)
-   - Remember the postgres password you set during installation
+Open PowerShell and verify:
 
-2. **Create Database**
-   ```bash
-   # Connect as postgres user
-   psql -U postgres
-   
-   # In psql prompt:
-   CREATE DATABASE question_bank;
-   ```
-
-3. **Set DATABASE_URL** (in your terminal/command prompt)
-   ```bash
-   # Windows Command Prompt
-   set DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/question_bank
-   
-   # Or Windows PowerShell
-   $env:DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/question_bank"
-   
-   # Or Git Bash
-   export DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/question_bank"
-   ```
-
-### Option 2: Using Neon (Cloud PostgreSQL)
-
-1. Go to https://neon.tech and create a free account
-2. Create a new project (PostgreSQL database)
-3. Copy the connection string from "Connection string" section
-4. Set the environment variable:
-   ```bash
-   set DATABASE_URL=your_neon_connection_string
-   ```
-
-### Option 3: Using Docker
-
-```bash
-# Run PostgreSQL in Docker
-docker run --name postgres-qb -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:15
-
-# Set DATABASE_URL
-set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
+```powershell
+node -v
+npm -v
+git --version
 ```
 
-## Environment Variables
+Enable pnpm with Corepack:
 
-Create a `.env` file in the root directory or set these in your terminal:
-
-```bash
-# Required
-DATABASE_URL=postgresql://user:password@host:port/database
-
-# Optional (defaults shown)
-PORT=8080
-BASE_PATH=/
-NODE_ENV=development
-LOG_LEVEL=info
+```powershell
+corepack enable
+corepack prepare pnpm@latest --activate
+pnpm -v
 ```
 
-## Running the Application
+## 2. Clone and open project
 
-### Step 1: Build Everything
-
-```bash
-cd "d:\StrangerThings Season 5\Question-Bank-Pro\Question-Bank-Pro"
-pnpm run build
+```powershell
+git clone <your-repo-url>
+cd "D:\StrangerThings Season 5\Question-Bank-Pro\Question-Bank-Pro"
 ```
 
-### Step 2: Push Database Schema (First time only)
+## 3. Configure database
 
-```bash
-# This creates all tables in your database
-pnpm --filter @workspace/db run push
+### Option A: Local PostgreSQL
+
+Create database:
+
+```powershell
+psql -U postgres -c "CREATE DATABASE question_bank_pro;"
 ```
 
-### Step 3: Start API Server
+Set database URL in current terminal:
 
-**In Terminal 1:**
-
-```bash
-# Set PORT if custom
-set PORT=8080
-
-# Start API server
-pnpm --filter @workspace/api-server run dev
-
-# Expected output:
-# > Server listening on port 8080
+```powershell
+$env:DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/question_bank_pro"
 ```
 
-### Step 4: Start Frontend (in new terminal)
+### Option B: Neon (cloud)
 
-**In Terminal 2:**
-
-```bash
-# Set ports if custom
-set PORT=3000
-set BASE_PATH=/
-
-# Start frontend dev server
-pnpm --filter @workspace/question-bank run dev
-
-# Expected output:
-# > VITE v... dev server running at:
-# > Local: http://localhost:3000/
+```powershell
+$env:DATABASE_URL="postgresql://USER:PASSWORD@HOST/DB?sslmode=require"
 ```
 
-## Access the Application
+## 4. One-command setup (recommended)
 
-Once both servers are running:
-
-- **Frontend**: http://localhost:3000
-- **API**: http://localhost:8080/api
-- **Health Check**: http://localhost:8080/api/healthz
-
-## Testing Flow
-
-1. **Dashboard** - View empty statistics
-2. **Subjects** - Create a new subject
-3. **Chapters** - Add chapters to the subject
-4. **Questions** - Create questions with:
-   - Text with LaTeX (try: `$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$`)
-   - Image uploads (PNG, JPG, JPEG - max 5MB)
-   - Multiple choice or fill-in-the-blank
-5. **Choices** - Add multiple choice options
-6. **Export** - Generate PDF of questions
-7. **Dashboard** - See updated statistics
-
-## Troubleshooting
-
-### "DATABASE_URL must be set" Error
-- Make sure you set the environment variable BEFORE running the app
-- Verify the DATABASE_URL is correct by testing connection
-- Try: `psql connection_string_here` to verify
-
-### "Cannot connect to database" Error
-- Make sure PostgreSQL is running
-- Check connection string: `postgresql://user:password@host:port/database`
-- Verify database exists (see "Create Database" above)
-- Check firewall isn't blocking port 5432
-
-### "Port 8080 already in use" Error
-```bash
-# Windows
-netstat -ano | findstr :8080
-
-# Kill the process
-taskkill /PID process_id /F
-
-# Or use different port
-set PORT=8081
+```powershell
+.\setup_and_run.bat
 ```
 
-### Build Errors
-```bash
-# Clean and reinstall
+What it does:
+
+1. `pnpm install`
+2. `pnpm build`
+3. `pnpm --filter @workspace/db run push`
+
+## 5. Start the app (two terminals)
+
+Terminal 1 (API):
+
+```powershell
+cd "D:\StrangerThings Season 5\Question-Bank-Pro\Question-Bank-Pro"
+$env:DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/question_bank_pro"
+.\start-api-server.bat
+```
+
+Terminal 2 (Frontend):
+
+```powershell
+cd "D:\StrangerThings Season 5\Question-Bank-Pro\Question-Bank-Pro"
+.\start-frontend.bat
+```
+
+Open in browser:
+
+- Frontend: http://localhost:3000
+- API health: http://localhost:8080/api/healthz
+
+## 6. Manual commands (if you do not use .bat files)
+
+```powershell
 pnpm install
-pnpm run build
-```
-
-### Database Schema Missing
-```bash
-# Push schema to database
+pnpm build
 pnpm --filter @workspace/db run push
-```
-
-## Development Commands
-
-```bash
-# Type checking
-pnpm run typecheck
-
-# Build all packages
-pnpm run build
-
-# API server development
 pnpm --filter @workspace/api-server run dev
-
-# Frontend development
 pnpm --filter @workspace/question-bank run dev
+```
 
-# Regenerate API from OpenAPI spec
-pnpm --filter @workspace/api-spec run codegen
+## 7. Production-style deployment on Windows server
 
-# Push database schema changes
+Use this flow on a fresh server after cloning:
+
+```powershell
+cd "D:\StrangerThings Season 5\Question-Bank-Pro\Question-Bank-Pro"
+corepack enable
+corepack prepare pnpm@latest --activate
+pnpm install --frozen-lockfile
+pnpm build
+$env:DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/question_bank_pro"
 pnpm --filter @workspace/db run push
-
-# View database schema
-pnpm --filter @workspace/db run introspect
 ```
 
-## Production Build
+Run API in production mode:
 
-```bash
-# Build optimized versions
+```powershell
+cd "D:\StrangerThings Season 5\Question-Bank-Pro\Question-Bank-Pro"
+$env:NODE_ENV="production"
+$env:PORT="8080"
+$env:DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/question_bank_pro"
+cd artifacts/api-server
+node --enable-source-maps ./dist/index.mjs
+```
+
+Frontend production artifact is generated at:
+
+- `artifacts/question-bank/dist/public`
+
+Serve it with your preferred Windows web server or reverse proxy to API on port 8080.
+
+## 8. Health and smoke checks
+
+```powershell
+curl http://localhost:8080/api/healthz
+pnpm --filter @workspace/scripts run runtime-smoke
+```
+
+## 9. Common Windows troubleshooting
+
+Port already in use:
+
+```powershell
+netstat -ano | findstr :8080
+taskkill /PID <PID> /F
+```
+
+Reinstall dependencies:
+
+```powershell
+pnpm store prune
+pnpm install
+pnpm build
+```
+
+Database schema mismatch:
+
+```powershell
+pnpm --filter @workspace/db run push
+```
+
+## 10. Windows command reference
+
+```powershell
+pnpm run typecheck
 pnpm run build
-
-# Start API server (production)
-set NODE_ENV=production
-pnpm --filter @workspace/api-server run start
-
-# Start frontend (production)
-pnpm --filter @workspace/question-bank run serve
+pnpm --filter @workspace/api-spec run codegen
+pnpm --filter @workspace/db run push
+pnpm --filter @workspace/api-server run dev
+pnpm --filter @workspace/question-bank run dev
+pnpm --filter @workspace/scripts run runtime-smoke
 ```
-
-## Architecture Overview
-
-```
-Question Bank Pro
-├── API Server (Express.js)
-│   ├── Routes: subjects, chapters, questions, choices, dashboard, export
-│   ├── Middleware: CORS, logging, validation
-│   └── Features: PDF generation, image upload, LaTeX rendering
-│
-├── Frontend (React + Vite)
-│   ├── Pages: dashboard, subjects, chapters, questions, export
-│   ├── Components: forms, tables, editor, charts
-│   └── Features: LaTeX preview, image upload, split-screen editor
-│
-├── Database (PostgreSQL)
-│   ├── Tables: subjects, chapters, questions, choices
-│   └── Storage: Images stored as bytea BLOB
-│
-└── Libraries
-    ├── API Client (React Query hooks)
-    ├── API Schema (Zod validation)
-    └── Database (Drizzle ORM)
-```
-
-## Performance Tips
-
-- LaTeX rendering is done server-side for PDF, client-side for preview
-- Images are stored as binary blobs in database for efficiency
-- React Query handles caching and cache invalidation
-- Pagination on questions list (default 20 per page)
-- Database indexes on foreign keys for fast lookups
-
-## Support
-
-If you encounter issues:
-
-1. Check the error message in the terminal
-2. Verify DATABASE_URL is set and correct
-3. Make sure PostgreSQL is running
-4. Check that all ports (3000, 8080) are available
-5. Review FIXES_APPLIED.md for recently fixed issues
-
----
-
-**Ready to test!** Follow the steps above and let me know if you encounter any issues.

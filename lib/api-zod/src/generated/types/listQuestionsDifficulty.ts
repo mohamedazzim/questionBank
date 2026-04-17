@@ -13,4 +13,5 @@ export const ListQuestionsDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;

@@ -10,7 +10,7 @@ import type { CreateQuestionBodyType } from "./createQuestionBodyType";
 
 export interface CreateQuestionBody {
   chapterId: number;
-  text: string;
+  text?: string;
   type: CreateQuestionBodyType;
   difficulty: CreateQuestionBodyDifficulty;
   image?: Blob;

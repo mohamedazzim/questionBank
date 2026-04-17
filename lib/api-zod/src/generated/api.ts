@@ -159,7 +159,7 @@ export const ListQuestionsQueryParams = zod.object({
   chapterId: zod.coerce.number().optional(),
   subjectId: zod.coerce.number().optional(),
   search: zod.coerce.string().optional(),
-  difficulty: zod.enum(["EASY", "MEDIUM", "HARD"]).optional(),
+  difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]).optional(),
   type: zod.enum(["MCQ", "FILLUP"]).optional(),
   page: zod.coerce.number().default(listQuestionsQueryPageDefault),
   limit: zod.coerce.number().default(listQuestionsQueryLimitDefault),
@@ -175,7 +175,7 @@ export const ListQuestionsResponse = zod.object({
       subjectName: zod.string().nullish(),
       text: zod.string(),
       type: zod.enum(["MCQ", "FILLUP"]),
-      difficulty: zod.enum(["EASY", "MEDIUM", "HARD"]),
+      difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
       imageUrl: zod.string().nullish(),
       imageName: zod.string().nullish(),
       imageType: zod.string().nullish(),
@@ -194,9 +194,9 @@ export const ListQuestionsResponse = zod.object({
  */
 export const CreateQuestionBody = zod.object({
   chapterId: zod.number(),
-  text: zod.string(),
+  text: zod.string().optional(),
   type: zod.enum(["MCQ", "FILLUP"]),
-  difficulty: zod.enum(["EASY", "MEDIUM", "HARD"]),
+  difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
   image: zod.instanceof(File).optional(),
 });
 
@@ -215,7 +215,7 @@ export const GetQuestionResponse = zod.object({
   subjectName: zod.string().nullish(),
   text: zod.string(),
   type: zod.enum(["MCQ", "FILLUP"]),
-  difficulty: zod.enum(["EASY", "MEDIUM", "HARD"]),
+  difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),
@@ -244,7 +244,7 @@ export const UpdateQuestionBody = zod.object({
   chapterId: zod.number().optional(),
   text: zod.string().optional(),
   type: zod.enum(["MCQ", "FILLUP"]).optional(),
-  difficulty: zod.enum(["EASY", "MEDIUM", "HARD"]).optional(),
+  difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]).optional(),
   image: zod.instanceof(File).optional(),
   removeImage: zod.enum(["true", "false"]).optional(),
 });
@@ -257,7 +257,7 @@ export const UpdateQuestionResponse = zod.object({
   subjectName: zod.string().nullish(),
   text: zod.string(),
   type: zod.enum(["MCQ", "FILLUP"]),
-  difficulty: zod.enum(["EASY", "MEDIUM", "HARD"]),
+  difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),
@@ -290,7 +290,7 @@ export const PreviewQuestionResponse = zod.object({
   id: zod.number(),
   text: zod.string(),
   type: zod.enum(["MCQ", "FILLUP"]),
-  difficulty: zod.enum(["EASY", "MEDIUM", "HARD"]),
+  difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
   chapterName: zod.string().nullish(),
   subjectName: zod.string().nullish(),
   imageData: zod.string().nullish(),
@@ -311,7 +311,7 @@ export const PreviewQuestionResponse = zod.object({
  */
 export const CreateChoiceBody = zod.object({
   questionId: zod.number(),
-  text: zod.string(),
+  text: zod.string().optional(),
   isCorrect: zod.boolean(),
   image: zod.instanceof(File).optional(),
 });
@@ -403,7 +403,7 @@ export const GetRecentQuestionsResponseItem = zod.object({
   subjectName: zod.string().nullish(),
   text: zod.string(),
   type: zod.enum(["MCQ", "FILLUP"]),
-  difficulty: zod.enum(["EASY", "MEDIUM", "HARD"]),
+  difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),

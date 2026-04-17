@@ -1109,7 +1109,9 @@ export const createQuestion = async (
 ): Promise<Question> => {
   const formData = new FormData();
   formData.append(`chapterId`, createQuestionBody.chapterId.toString());
-  formData.append(`text`, createQuestionBody.text);
+  if (createQuestionBody.text !== undefined) {
+    formData.append(`text`, createQuestionBody.text);
+  }
   formData.append(`type`, createQuestionBody.type);
   formData.append(`difficulty`, createQuestionBody.difficulty);
   if (createQuestionBody.image !== undefined) {
@@ -1654,7 +1656,9 @@ export const createChoice = async (
 ): Promise<Choice> => {
   const formData = new FormData();
   formData.append(`questionId`, createChoiceBody.questionId.toString());
-  formData.append(`text`, createChoiceBody.text);
+  if (createChoiceBody.text !== undefined) {
+    formData.append(`text`, createChoiceBody.text);
+  }
   formData.append(`isCorrect`, createChoiceBody.isCorrect.toString());
   if (createChoiceBody.image !== undefined) {
     formData.append(`image`, createChoiceBody.image);

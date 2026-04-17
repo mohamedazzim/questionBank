@@ -9,12 +9,21 @@ import {
 import { upload } from "../lib/multer";
 
 const router: IRouter = Router();
+const normalizeText = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
 
 router.post("/choices", upload.single("image"), async (req, res): Promise<void> => {
   const body = req.body;
+  const imageFile = req.file;
   const questionId = parseInt(body.questionId, 10);
-  if (!body.text || isNaN(questionId)) {
-    res.status(400).json({ error: "Missing required fields: questionId, text" });
+  const normalizedText = normalizeText(body.text);
+
+  if (isNaN(questionId)) {
+    res.status(400).json({ error: "Missing required field: questionId" });
+    return;
+  }
+
+  if (!normalizedText && !imageFile) {
+    res.status(400).json({ error: "Choice must include text or an image" });
     return;
   }
 
@@ -26,13 +35,12 @@ router.post("/choices", upload.single("image"), async (req, res): Promise<void> 
   }
 
   const isCorrect = body.isCorrect === "true" || body.isCorrect === true;
-  const imageFile = req.file;
 
   const [choice] = await db
     .insert(choicesTable)
     .values({
       questionId,
-      text: body.text,
+      text: normalizedText,
       isCorrect,
       imageData: imageFile ? imageFile.buffer : null,
       imageName: imageFile ? imageFile.originalname : null,
@@ -61,8 +69,29 @@ router.put("/choices/:id", upload.single("image"), async (req, res): Promise<voi
   const imageFile = req.file;
   const removeImage = body.removeImage === "true";
 
+  const [existingChoice] = await db
+    .select({
+      id: choicesTable.id,
+      text: choicesTable.text,
+      imageName: choicesTable.imageName,
+    })
+    .from(choicesTable)
+    .where(eq(choicesTable.id, params.data.id));
+
+  if (!existingChoice) {
+    res.status(404).json({ error: "Choice not found" });
+    return;
+  }
+
+  const nextText = body.text != null ? normalizeText(body.text) : normalizeText(existingChoice.text);
+  const nextHasImage = imageFile ? true : removeImage ? false : Boolean(existingChoice.imageName);
+  if (!nextText && !nextHasImage) {
+    res.status(400).json({ error: "Choice must include text or an image" });
+    return;
+  }
+
   const updateData: Record<string, unknown> = {};
-  if (body.text != null) updateData.text = body.text;
+  if (body.text != null) updateData.text = normalizeText(body.text);
   if (body.isCorrect !== undefined) {
     updateData.isCorrect = body.isCorrect === "true" || body.isCorrect === true;
   }

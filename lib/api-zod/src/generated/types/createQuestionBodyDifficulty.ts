@@ -13,4 +13,5 @@ export const CreateQuestionBodyDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;

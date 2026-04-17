@@ -13,4 +13,5 @@ export const QuestionPreviewDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;

@@ -8,7 +8,7 @@
 
 export interface CreateChoiceBody {
   questionId: number;
-  text: string;
+  text?: string;
   isCorrect: boolean;
   image?: Blob;
 }

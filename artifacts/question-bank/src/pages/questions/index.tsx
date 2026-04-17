@@ -56,6 +56,13 @@ export default function Questions() {
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  const getDifficultyBadgeVariant = (difficultyValue: string): "default" | "secondary" | "destructive" | "outline" => {
+    if (difficultyValue === "HARD") return "destructive";
+    if (difficultyValue === "MEDIUM") return "default";
+    if (difficultyValue === "UNLABLED") return "outline";
+    return "secondary";
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
@@ -162,6 +169,7 @@ export default function Questions() {
             <SelectItem value="EASY">Easy</SelectItem>
             <SelectItem value="MEDIUM">Medium</SelectItem>
             <SelectItem value="HARD">Hard</SelectItem>
+            <SelectItem value="UNLABLED">Unlabled</SelectItem>
           </SelectContent>
         </Select>
 
@@ -217,7 +225,7 @@ export default function Questions() {
                   <TableCell>
                     <div className="flex flex-col items-start gap-1">
                       <Badge variant="outline">{question.type}</Badge>
-                      <Badge variant={question.difficulty === 'HARD' ? 'destructive' : question.difficulty === 'MEDIUM' ? 'default' : 'secondary'} className="text-[10px] h-4 px-1">
+                      <Badge variant={getDifficultyBadgeVariant(question.difficulty)} className="text-[10px] h-4 px-1">
                         {question.difficulty}
                       </Badge>
                     </div>

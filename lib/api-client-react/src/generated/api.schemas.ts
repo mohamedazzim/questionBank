@@ -57,6 +57,7 @@ export const QuestionDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;
 
 export interface Question {
@@ -105,11 +106,12 @@ export const CreateQuestionBodyDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;
 
 export interface CreateQuestionBody {
   chapterId: number;
-  text: string;
+  text?: string;
   type: CreateQuestionBodyType;
   difficulty: CreateQuestionBodyDifficulty;
   image?: Blob;
@@ -130,6 +132,7 @@ export const UpdateQuestionBodyDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;
 
 export type UpdateQuestionBodyRemoveImage =
@@ -163,7 +166,7 @@ export interface Choice {
 
 export interface CreateChoiceBody {
   questionId: number;
-  text: string;
+  text?: string;
   isCorrect: boolean;
   image?: Blob;
 }
@@ -198,6 +201,7 @@ export const QuestionDetailDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;
 
 export interface QuestionDetail {
@@ -247,6 +251,7 @@ export const QuestionPreviewDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;
 
 export interface QuestionPreview {
@@ -319,6 +324,7 @@ export const ListQuestionsDifficulty = {
   EASY: "EASY",
   MEDIUM: "MEDIUM",
   HARD: "HARD",
+  UNLABLED: "UNLABLED",
 } as const;
 
 export type ListQuestionsType =

@@ -299,7 +299,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [EASY, MEDIUM, HARD]
+            enum: [EASY, MEDIUM, HARD, UNLABLED]
         - name: type
           in: query
           schema:
@@ -808,7 +808,7 @@ components:
           enum: [MCQ, FILLUP]
         difficulty:
           type: string
-          enum: [EASY, MEDIUM, HARD]
+          enum: [EASY, MEDIUM, HARD, UNLABLED]
         imageUrl:
           type: ["string", "null"]
         imageName:
@@ -862,13 +862,12 @@ components:
           enum: [MCQ, FILLUP]
         difficulty:
           type: string
-          enum: [EASY, MEDIUM, HARD]
+          enum: [EASY, MEDIUM, HARD, UNLABLED]
         image:
           type: string
           format: binary
       required:
         - chapterId
-        - text
         - type
         - difficulty
 
@@ -884,7 +883,7 @@ components:
           enum: [MCQ, FILLUP]
         difficulty:
           type: string
-          enum: [EASY, MEDIUM, HARD]
+          enum: [EASY, MEDIUM, HARD, UNLABLED]
         image:
           type: string
           format: binary
@@ -931,7 +930,6 @@ components:
           format: binary
       required:
         - questionId
-        - text
         - isCorrect
 
     UpdateChoiceBody:
@@ -968,7 +966,7 @@ components:
           enum: [MCQ, FILLUP]
         difficulty:
           type: string
-          enum: [EASY, MEDIUM, HARD]
+          enum: [EASY, MEDIUM, HARD, UNLABLED]
         imageUrl:
           type: ["string", "null"]
         imageName:
@@ -1021,7 +1019,7 @@ components:
           enum: [MCQ, FILLUP]
         difficulty:
           type: string
-          enum: [EASY, MEDIUM, HARD]
+          enum: [EASY, MEDIUM, HARD, UNLABLED]
         chapterName:
           type: ["string", "null"]
         subjectName:

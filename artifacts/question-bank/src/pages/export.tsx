@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { useListSubjects, useListChapters, useListQuestions } from "@workspace/api-client-react";
+import { useListSubjects, useListChapters, useListQuestions, usePreviewQuestion, getPreviewQuestionQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, FileText, Library, BookOpen, ListChecks } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +15,11 @@ import { LatexRenderer } from "@/components/latex-renderer";
 type ExportHealth = {
   canGeneratePdf: boolean;
   browserPath: string | null;
+};
+
+const toDataUri = (imageData: string | null | undefined, imageType: string | null | undefined): string | null => {
+  if (!imageData || !imageType) return null;
+  return `data:${imageType};base64,${imageData}`;
 };
 
 export default function Export() {
@@ -26,6 +33,8 @@ export default function Export() {
   const [filterSubjectId, setFilterSubjectId] = useState<string>("all");
   const [filterChapterId, setFilterChapterId] = useState<string>("all");
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
+  const [previewQuestionId, setPreviewQuestionId] = useState<number>(0);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   const [isExporting, setIsExporting] = useState(false);
   const [exportHealth, setExportHealth] = useState<ExportHealth | null>(null);
@@ -74,10 +83,22 @@ export default function Export() {
     }
   });
 
+  const { data: previewQuestion, isLoading: isPreviewLoading } = usePreviewQuestion(previewQuestionId, {
+    query: {
+      enabled: isPreviewOpen && previewQuestionId > 0,
+      queryKey: getPreviewQuestionQueryKey(previewQuestionId),
+    },
+  });
+
   const toggleQuestionSelection = (id: number) => {
     setSelectedQuestionIds(prev => 
       prev.includes(id) ? prev.filter(qId => qId !== id) : [...prev, id]
     );
+  };
+
+  const openPreview = (id: number) => {
+    setPreviewQuestionId(id);
+    setIsPreviewOpen(true);
   };
 
   const selectAllQuestions = () => {
@@ -306,6 +327,9 @@ export default function Export() {
                   </div>
                   <span className="text-sm text-muted-foreground">{selectedQuestionIds.length} selected</span>
                 </div>
+                <div className="px-4 py-2 text-xs text-muted-foreground border-b bg-muted/30">
+                  Click any question text to open instant preview.
+                </div>
                 <ScrollArea className="h-[300px]">
                   <div className="p-4 space-y-3">
                     {questionsData?.questions?.map(q => (
@@ -315,8 +339,12 @@ export default function Export() {
                           checked={selectedQuestionIds.includes(q.id)}
                           onCheckedChange={() => toggleQuestionSelection(q.id)}
                         />
-                        <div className="flex-1 space-y-1">
-                          <LatexRenderer content={q.text} className="text-sm line-clamp-2" />
+                        <button
+                          type="button"
+                          className="flex-1 space-y-1 text-left"
+                          onClick={() => openPreview(q.id)}
+                        >
+                          <LatexRenderer content={q.text || "(Image-only question)"} className="text-sm line-clamp-2" />
                           <div className="text-xs text-muted-foreground flex gap-2">
                             <span>{q.subjectName}</span>
                             <span>&bull;</span>
@@ -324,7 +352,7 @@ export default function Export() {
                             <span>&bull;</span>
                             <span>{q.difficulty}</span>
                           </div>
-                        </div>
+                        </button>
                       </div>
                     ))}
                     {questionsData?.questions?.length === 0 && (
@@ -352,6 +380,62 @@ export default function Export() {
           )}
         </Button>
       </div>
+
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Question Preview</DialogTitle>
+          </DialogHeader>
+
+          {isPreviewLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-6 w-1/2" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : previewQuestion ? (
+            <div className="space-y-4">
+              <div className="text-xs text-muted-foreground">
+                {previewQuestion.subjectName || "Subject"} &gt; {previewQuestion.chapterName || "Chapter"} &bull; {previewQuestion.type} &bull; {previewQuestion.difficulty}
+              </div>
+
+              <LatexRenderer content={previewQuestion.text || "(Image-only question)"} className="text-sm" />
+
+              {toDataUri(previewQuestion.imageData, previewQuestion.imageType) && (
+                <img
+                  src={toDataUri(previewQuestion.imageData, previewQuestion.imageType) as string}
+                  alt="Question"
+                  className="max-h-64 rounded border object-contain"
+                />
+              )}
+
+              {previewQuestion.type === "MCQ" && previewQuestion.choices.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  {previewQuestion.choices.map((choice, index) => {
+                    const choiceImage = toDataUri(choice.imageData, choice.imageType);
+                    return (
+                      <div key={choice.id} className={`p-3 rounded-md border ${choice.isCorrect ? "bg-primary/5 border-primary/20" : "bg-card"}`}>
+                        <div className="flex gap-2">
+                          <span className="text-sm font-semibold mt-0.5">{String.fromCharCode(65 + index)}.</span>
+                          <div className="flex-1 space-y-2">
+                            <LatexRenderer content={choice.text || "(Image-only choice)"} className="text-sm" />
+                            {choiceImage && (
+                              <img src={choiceImage} alt={`Choice ${index + 1}`} className="max-h-36 rounded border object-contain" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">Select a question to preview.</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

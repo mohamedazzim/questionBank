@@ -10,18 +10,23 @@ echo.
 cd "d:\StrangerThings Season 5\Question-Bank-Pro\Question-Bank-Pro"
 
 REM Set environment variables
-set DATABASE_URL=postgresql://postgres:data@localhost:5432/question_bank_pro
-set PORT=8080
-set NODE_ENV=development
+if "%DATABASE_URL%"=="" set DATABASE_URL=postgresql://postgres:data@localhost:5432/question_bank_pro
+if "%PORT%"=="" set PORT=8080
+if "%NODE_ENV%"=="" set NODE_ENV=development
 
 echo ✓ Database: postgresql://postgres:***@localhost:5432/question_bank_pro
-echo ✓ Port: 8080
-echo ✓ Environment: development
+echo ✓ Port: %PORT%
+echo ✓ Environment: %NODE_ENV%
 echo.
 
 REM Start API server
 cd artifacts/api-server
-node --enable-source-maps ./dist/index.mjs
+if exist dist\index.mjs (
+  node --enable-source-maps ./dist/index.mjs
+) else (
+  cd ..\..
+  pnpm --filter @workspace/api-server run dev
+)
 
 REM Keep window open if there's an error
 if %errorlevel% neq 0 (

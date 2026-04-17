@@ -12,6 +12,10 @@ import {
 import { upload } from "../lib/multer";
 
 const router: IRouter = Router();
+const VALID_QUESTION_TYPES = ["MCQ", "FILLUP"];
+const VALID_DIFFICULTIES = ["EASY", "MEDIUM", "HARD", "UNLABLED"];
+
+const normalizeText = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
 
 router.get("/questions", async (req, res): Promise<void> => {
   const query = ListQuestionsQueryParams.safeParse(req.query);
@@ -80,15 +84,21 @@ router.get("/questions", async (req, res): Promise<void> => {
 
 router.post("/questions", upload.single("image"), async (req, res): Promise<void> => {
   const body = req.body;
+  const imageFile = req.file;
   const chapterId = parseInt(body.chapterId, 10);
-  if (!body.text || !body.type || !body.difficulty || isNaN(chapterId)) {
-    res.status(400).json({ error: "Missing required fields: chapterId, text, type, difficulty" });
+  const normalizedText = normalizeText(body.text);
+
+  if (!body.type || !body.difficulty || isNaN(chapterId)) {
+    res.status(400).json({ error: "Missing required fields: chapterId, type, difficulty" });
     return;
   }
 
-  const validTypes = ["MCQ", "FILLUP"];
-  const validDifficulties = ["EASY", "MEDIUM", "HARD"];
-  if (!validTypes.includes(body.type) || !validDifficulties.includes(body.difficulty)) {
+  if (!normalizedText && !imageFile) {
+    res.status(400).json({ error: "Question must include text or an image" });
+    return;
+  }
+
+  if (!VALID_QUESTION_TYPES.includes(body.type) || !VALID_DIFFICULTIES.includes(body.difficulty)) {
     res.status(400).json({ error: "Invalid type or difficulty" });
     return;
   }
@@ -100,12 +110,11 @@ router.post("/questions", upload.single("image"), async (req, res): Promise<void
     return;
   }
 
-  const imageFile = req.file;
   const [question] = await db
     .insert(questionsTable)
     .values({
       chapterId,
-      text: body.text,
+      text: normalizedText,
       type: body.type,
       difficulty: body.difficulty,
       imageData: imageFile ? imageFile.buffer : null,
@@ -188,8 +197,54 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
   const imageFile = req.file;
   const removeImage = body.removeImage === "true";
 
+  const [existingQuestion] = await db
+    .select({
+      id: questionsTable.id,
+      text: questionsTable.text,
+      imageName: questionsTable.imageName,
+      chapterId: questionsTable.chapterId,
+    })
+    .from(questionsTable)
+    .where(eq(questionsTable.id, params.data.id));
+
+  if (!existingQuestion) {
+    res.status(404).json({ error: "Question not found" });
+    return;
+  }
+
+  if (body.type && !VALID_QUESTION_TYPES.includes(body.type)) {
+    res.status(400).json({ error: "Invalid question type" });
+    return;
+  }
+
+  if (body.difficulty && !VALID_DIFFICULTIES.includes(body.difficulty)) {
+    res.status(400).json({ error: "Invalid difficulty" });
+    return;
+  }
+
+  if (body.chapterId) {
+    const nextChapterId = parseInt(body.chapterId, 10);
+    if (Number.isNaN(nextChapterId)) {
+      res.status(400).json({ error: "Invalid chapterId" });
+      return;
+    }
+
+    const [chapter] = await db.select().from(chaptersTable).where(eq(chaptersTable.id, nextChapterId));
+    if (!chapter) {
+      res.status(400).json({ error: "Chapter not found" });
+      return;
+    }
+  }
+
+  const nextText = body.text != null ? normalizeText(body.text) : normalizeText(existingQuestion.text);
+  const nextHasImage = imageFile ? true : removeImage ? false : Boolean(existingQuestion.imageName);
+  if (!nextText && !nextHasImage) {
+    res.status(400).json({ error: "Question must include text or an image" });
+    return;
+  }
+
   const updateData: Record<string, unknown> = {};
-  if (body.text != null) updateData.text = body.text;
+  if (body.text != null) updateData.text = normalizeText(body.text);
   if (body.type) updateData.type = body.type;
   if (body.difficulty) updateData.difficulty = body.difficulty;
   if (body.chapterId) updateData.chapterId = parseInt(body.chapterId, 10);

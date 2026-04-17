@@ -1,2 +1,3 @@
-// Export everything from generated API schemas (includes both schemas and inferred types)
+// `generated/api` already re-exports schema types, so exporting `generated/types`
+// again causes duplicate symbol errors after codegen.
 export * from "./generated/api";

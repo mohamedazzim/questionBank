@@ -236,10 +236,16 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
 
       return `
         <div class="choice ${c.isCorrect ? "correct" : ""}">
-          <span class="choice-letter">${String.fromCharCode(65 + ci)}.</span>
-          <span class="choice-text">${renderLatex(c.text)}</span>
-          ${correctMark}
-          ${choiceImageHtml}
+          <div class="choice-main">
+            <span class="choice-letter">${String.fromCharCode(65 + ci)}.</span>
+            <div class="choice-content">
+              <div class="choice-text-row">
+                <span class="choice-text">${renderLatex(c.text)}</span>
+                ${correctMark}
+              </div>
+              ${choiceImageHtml}
+            </div>
+          </div>
         </div>`;
     }).join("");
 
@@ -377,13 +383,16 @@ ${katexCss}
     }
     
     .choice {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
       padding: 8px 12px;
       border: 1px solid #e5e7eb;
       border-radius: 6px;
       background: #fafafa;
+    }
+
+    .choice-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
     }
     
     .choice.correct {
@@ -401,6 +410,19 @@ ${katexCss}
       flex: 1;
       line-height: 1.5;
     }
+
+    .choice-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .choice-text-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
     
     .correct-mark {
       color: #22c55e;
@@ -409,11 +431,11 @@ ${katexCss}
     }
     
     .choice-image {
-      max-width: 100px;
-      max-height: 80px;
+      max-width: 160px;
+      max-height: 120px;
       object-fit: contain;
-      margin-left: 8px;
       border-radius: 3px;
+      border: 1px solid #e5e7eb;
     }
     
     .katex-display { overflow-x: auto; }
