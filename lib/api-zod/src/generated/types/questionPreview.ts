@@ -21,6 +21,8 @@ export interface QuestionPreview {
   verificationStatus?: QuestionPreviewVerificationStatus;
   isPreviousYear?: boolean;
   /** @nullable */
+  previousYearDateText?: string | null;
+  /** @nullable */
   previousYearYear?: number | null;
   /** @nullable */
   previousYearMonth?: QuestionPreviewPreviousYearMonth;
@@ -32,5 +34,11 @@ export interface QuestionPreview {
   imageData?: string | null;
   /** @nullable */
   imageType?: string | null;
+  /** @nullable */
+  solutionText?: string | null;
+  /** @nullable */
+  solutionImageData?: string | null;
+  /** @nullable */
+  solutionImageType?: string | null;
   choices: ChoicePreview[];
 }

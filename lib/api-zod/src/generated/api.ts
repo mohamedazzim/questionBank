@@ -184,6 +184,7 @@ export const ListQuestionsResponse = zod.object({
         .enum(["Verified", "Need to Verified", "Changes Needed"])
         .optional(),
       isPreviousYear: zod.boolean().optional(),
+      previousYearDateText: zod.string().nullish(),
       previousYearYear: zod.number().nullish(),
       previousYearMonth: zod
         .union([
@@ -205,6 +206,10 @@ export const ListQuestionsResponse = zod.object({
       imageUrl: zod.string().nullish(),
       imageName: zod.string().nullish(),
       imageType: zod.string().nullish(),
+      solutionText: zod.string().nullish(),
+      solutionImageUrl: zod.string().nullish(),
+      solutionImageName: zod.string().nullish(),
+      solutionImageType: zod.string().nullish(),
       createdAt: zod.coerce.date(),
       choiceCount: zod.number().nullish(),
     }),
@@ -236,6 +241,7 @@ export const CreateQuestionBody = zod.object({
   isPreviousYear: zod
     .boolean()
     .default(createQuestionBodyIsPreviousYearDefault),
+  previousYearDateText: zod.string().optional(),
   previousYearYear: zod.number().optional(),
   previousYearMonth: zod
     .enum([
@@ -253,7 +259,9 @@ export const CreateQuestionBody = zod.object({
       "December",
     ])
     .optional(),
+  solutionText: zod.string().optional(),
   image: zod.instanceof(File).optional(),
+  solutionImage: zod.instanceof(File).optional(),
 });
 
 /**
@@ -277,6 +285,7 @@ export const GetQuestionResponse = zod.object({
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
   isPreviousYear: zod.boolean().optional(),
+  previousYearDateText: zod.string().nullish(),
   previousYearYear: zod.number().nullish(),
   previousYearMonth: zod
     .union([
@@ -298,6 +307,10 @@ export const GetQuestionResponse = zod.object({
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),
+  solutionText: zod.string().nullish(),
+  solutionImageUrl: zod.string().nullish(),
+  solutionImageName: zod.string().nullish(),
+  solutionImageType: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   choices: zod.array(
     zod.object({
@@ -329,6 +342,7 @@ export const UpdateQuestionBody = zod.object({
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
   isPreviousYear: zod.boolean().optional(),
+  previousYearDateText: zod.string().optional(),
   previousYearYear: zod.number().optional(),
   previousYearMonth: zod
     .enum([
@@ -346,8 +360,11 @@ export const UpdateQuestionBody = zod.object({
       "December",
     ])
     .optional(),
+  solutionText: zod.string().optional(),
   image: zod.instanceof(File).optional(),
+  solutionImage: zod.instanceof(File).optional(),
   removeImage: zod.enum(["true", "false"]).optional(),
+  removeSolutionImage: zod.enum(["true", "false"]).optional(),
 });
 
 export const UpdateQuestionResponse = zod.object({
@@ -364,6 +381,7 @@ export const UpdateQuestionResponse = zod.object({
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
   isPreviousYear: zod.boolean().optional(),
+  previousYearDateText: zod.string().nullish(),
   previousYearYear: zod.number().nullish(),
   previousYearMonth: zod
     .union([
@@ -385,6 +403,10 @@ export const UpdateQuestionResponse = zod.object({
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),
+  solutionText: zod.string().nullish(),
+  solutionImageUrl: zod.string().nullish(),
+  solutionImageName: zod.string().nullish(),
+  solutionImageType: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   choiceCount: zod.number().nullish(),
 });
@@ -420,6 +442,7 @@ export const PreviewQuestionResponse = zod.object({
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
   isPreviousYear: zod.boolean().optional(),
+  previousYearDateText: zod.string().nullish(),
   previousYearYear: zod.number().nullish(),
   previousYearMonth: zod
     .union([
@@ -442,6 +465,9 @@ export const PreviewQuestionResponse = zod.object({
   subjectName: zod.string().nullish(),
   imageData: zod.string().nullish(),
   imageType: zod.string().nullish(),
+  solutionText: zod.string().nullish(),
+  solutionImageData: zod.string().nullish(),
+  solutionImageType: zod.string().nullish(),
   choices: zod.array(
     zod.object({
       id: zod.number(),
@@ -556,6 +582,7 @@ export const GetRecentQuestionsResponseItem = zod.object({
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
   isPreviousYear: zod.boolean().optional(),
+  previousYearDateText: zod.string().nullish(),
   previousYearYear: zod.number().nullish(),
   previousYearMonth: zod
     .union([
@@ -577,6 +604,10 @@ export const GetRecentQuestionsResponseItem = zod.object({
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),
+  solutionText: zod.string().nullish(),
+  solutionImageUrl: zod.string().nullish(),
+  solutionImageName: zod.string().nullish(),
+  solutionImageType: zod.string().nullish(),
   createdAt: zod.coerce.date(),
   choiceCount: zod.number().nullish(),
 });

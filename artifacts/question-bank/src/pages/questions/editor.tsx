@@ -37,11 +37,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Command,
@@ -74,33 +72,6 @@ type SearchableSelectProps = {
   emptyText: string;
   disabled?: boolean;
 };
-
-type TypeaheadStringSelectProps = {
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-  placeholder: string;
-  searchPlaceholder: string;
-  emptyText: string;
-  disabled?: boolean;
-};
-
-const MONTH_OPTIONS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-const YEAR_OPTIONS = Array.from({ length: new Date().getFullYear() - 1979 }, (_, i) => `${new Date().getFullYear() - i}`);
 
 function SearchableSelect({
   value,
@@ -149,93 +120,6 @@ function SearchableSelect({
                 </CommandItem>
               ))}
             </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function TypeaheadStringSelect({
-  value,
-  onChange,
-  options,
-  placeholder,
-  searchPlaceholder,
-  emptyText,
-  disabled,
-}: TypeaheadStringSelectProps) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const selected = options.find((option) => option === value);
-
-  const filteredOptions = options.filter((option) => {
-    if (!query.trim()) return true;
-    return option.toLowerCase().startsWith(query.toLowerCase());
-  });
-
-  const selectFirstFiltered = () => {
-    if (filteredOptions.length === 0) return;
-    onChange(filteredOptions[0]);
-    setOpen(false);
-    setQuery("");
-  };
-
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
-        if (nextOpen) setQuery("");
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between font-normal"
-          disabled={disabled}
-        >
-          {selected || placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder={searchPlaceholder}
-            value={query}
-            onValueChange={setQuery}
-            onKeyDown={(event) => {
-              if ((event.key === "Enter" || event.key === "Tab") && filteredOptions.length > 0) {
-                event.preventDefault();
-                selectFirstFiltered();
-              }
-            }}
-          />
-          <CommandList>
-            {filteredOptions.length === 0 ? (
-              <CommandEmpty>{emptyText}</CommandEmpty>
-            ) : (
-              <CommandGroup>
-                {filteredOptions.map((option) => (
-                  <CommandItem
-                    key={option}
-                    value={option}
-                    onSelect={() => {
-                      onChange(option);
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                  >
-                    <Check className={cn("mr-2 h-4 w-4", value === option ? "opacity-100" : "opacity-0")} />
-                    {option}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
           </CommandList>
         </Command>
       </PopoverContent>
@@ -295,24 +179,14 @@ const questionSchema = z.object({
   activeStatus: z.enum(["Active", "Inactive"]),
   verificationStatus: z.enum(["Verified", "Need to Verified", "Changes Needed"]),
   isPreviousYear: z.boolean().default(false),
-  previousYearYear: z.coerce.number().optional(),
-  previousYearMonth: z.enum([
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ]).optional(),
+  previousYearDateText: z.string().optional(),
   image: z.instanceof(File).optional(),
   removeImage: z.boolean().optional(),
   _localPreview: z.string().optional(),
+  solutionText: z.string().optional(),
+  solutionImage: z.instanceof(File).optional(),
+  removeSolutionImage: z.boolean().optional(),
+  _solutionLocalPreview: z.string().optional(),
   choices: z.array(choiceSchema).optional(),
 }).superRefine((data, ctx) => {
   if (!hasText(data.text) && !hasImage(data.image, data._localPreview, data.removeImage)) {
@@ -359,19 +233,11 @@ const questionSchema = z.object({
   }
 
   if (data.isPreviousYear) {
-    if (!data.previousYearYear) {
+    if (!hasText(data.previousYearDateText)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Year is required when Previous Year Question is checked.",
-        path: ["previousYearYear"],
-      });
-    }
-
-    if (!data.previousYearMonth) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Month is required when Previous Year Question is checked.",
-        path: ["previousYearMonth"],
+        message: "Date text is required when Previous Year Question is checked.",
+        path: ["previousYearDateText"],
       });
     }
   }
@@ -391,13 +257,6 @@ export default function QuestionEditor() {
   const [previewMode, setPreviewMode] = useState(false);
   const [showPreviewPanel, setShowPreviewPanel] = useState(true);
   const hasAppliedSavedSelection = useRef(false);
-
-  const getDifficultyBadgeVariant = (difficulty: string): "default" | "secondary" | "destructive" | "outline" => {
-    if (difficulty === "HARD") return "destructive";
-    if (difficulty === "MEDIUM") return "default";
-    if (difficulty === "UNLABLED") return "outline";
-    return "secondary";
-  };
   
   const { data: subjects } = useListSubjects();
   const { data: existingQuestion, isLoading: isLoadingQuestion } = useGetQuestion(questionId, {
@@ -416,13 +275,13 @@ export default function QuestionEditor() {
       subjectId: 0,
       chapterId: 0,
       text: "",
+      solutionText: "",
       type: "MCQ",
       difficulty: "MEDIUM",
       activeStatus: "Active",
       verificationStatus: "Need to Verified",
       isPreviousYear: false,
-      previousYearYear: undefined,
-      previousYearMonth: undefined,
+      previousYearDateText: "",
       choices: [
         { text: "", isCorrect: false },
         { text: "", isCorrect: false },
@@ -496,9 +355,15 @@ export default function QuestionEditor() {
         activeStatus: (existingQuestion as any).activeStatus || "Active",
         verificationStatus: (existingQuestion as any).verificationStatus || "Need to Verified",
         isPreviousYear: Boolean((existingQuestion as any).isPreviousYear),
-        previousYearYear: (existingQuestion as any).previousYearYear || undefined,
-        previousYearMonth: (existingQuestion as any).previousYearMonth || undefined,
+        previousYearDateText:
+          (existingQuestion as any).previousYearDateText ||
+          [
+            (existingQuestion as any).previousYearMonth,
+            (existingQuestion as any).previousYearYear,
+          ].filter(Boolean).join(" "),
         _localPreview: existingQuestion.imageUrl || undefined,
+        solutionText: (existingQuestion as any).solutionText || "",
+        _solutionLocalPreview: (existingQuestion as any).solutionImageUrl || undefined,
         choices: (existingQuestion as any).choices?.map((c: any) => ({
           id: c.id,
           text: c.text,
@@ -558,16 +423,18 @@ export default function QuestionEditor() {
         const qData: any = {
           chapterId: data.chapterId,
           text: normalizedQuestionText,
+          solutionText: (data.solutionText || "").trim(),
           type: data.type,
           difficulty: data.difficulty,
           activeStatus: data.activeStatus,
           verificationStatus: data.verificationStatus,
           isPreviousYear: data.isPreviousYear,
-          previousYearYear: data.isPreviousYear ? data.previousYearYear : undefined,
-          previousYearMonth: data.isPreviousYear ? data.previousYearMonth : undefined,
+          previousYearDateText: data.isPreviousYear ? (data.previousYearDateText || "").trim() : undefined,
         };
         if (data.image) qData.image = data.image;
         if (data.removeImage) qData.removeImage = "true";
+        if (data.solutionImage) qData.solutionImage = data.solutionImage;
+        if (data.removeSolutionImage) qData.removeSolutionImage = "true";
         
         await updateQuestion.mutateAsync({ id: questionId, data: qData });
 
@@ -612,15 +479,16 @@ export default function QuestionEditor() {
         const qData: any = {
           chapterId: data.chapterId,
           text: normalizedQuestionText,
+          solutionText: (data.solutionText || "").trim(),
           type: data.type,
           difficulty: data.difficulty,
           activeStatus: data.activeStatus,
           verificationStatus: data.verificationStatus,
           isPreviousYear: data.isPreviousYear,
-          previousYearYear: data.isPreviousYear ? data.previousYearYear : undefined,
-          previousYearMonth: data.isPreviousYear ? data.previousYearMonth : undefined,
+          previousYearDateText: data.isPreviousYear ? (data.previousYearDateText || "").trim() : undefined,
         };
         if (data.image) qData.image = data.image;
+        if (data.solutionImage) qData.solutionImage = data.solutionImage;
 
         const newQuestion = await createQuestion.mutateAsync({ data: qData });
         
@@ -647,7 +515,12 @@ export default function QuestionEditor() {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: any) => {
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fieldName: any,
+    rootPreviewField = "_localPreview",
+    rootRemoveField = "removeImage",
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       form.setValue(fieldName, file);
@@ -657,21 +530,26 @@ export default function QuestionEditor() {
         form.setValue(`${prefix}._localPreview` as any, URL.createObjectURL(file) as any);
         form.setValue(`${prefix}.removeImage` as any, false as any);
       } else {
-        form.setValue("_localPreview" as any, URL.createObjectURL(file) as any);
-        form.setValue("removeImage" as any, false as any);
+        form.setValue(rootPreviewField as any, URL.createObjectURL(file) as any);
+        form.setValue(rootRemoveField as any, false as any);
       }
     }
   };
 
-  const handleRemoveImage = (fieldNamePrefix: string) => {
+  const handleRemoveImage = (
+    fieldNamePrefix: string,
+    rootImageField = "image",
+    rootPreviewField = "_localPreview",
+    rootRemoveField = "removeImage",
+  ) => {
     if (fieldNamePrefix) {
       form.setValue(`${fieldNamePrefix}.image` as any, undefined);
       form.setValue(`${fieldNamePrefix}._localPreview` as any, undefined);
       form.setValue(`${fieldNamePrefix}.removeImage` as any, true);
     } else {
-      form.setValue("image" as any, undefined);
-      form.setValue("_localPreview" as any, undefined);
-      form.setValue("removeImage" as any, true);
+      form.setValue(rootImageField as any, undefined);
+      form.setValue(rootPreviewField as any, undefined);
+      form.setValue(rootRemoveField as any, true);
     }
   };
 
@@ -722,31 +600,19 @@ export default function QuestionEditor() {
 
     // Local preview for unsaved or current form state
     const currentValues = form.getValues();
-    const sub = subjectOptions.find(s => s.id === currentValues.subjectId);
-    const ch = chapterOptionsWithFallback.find(c => c.id === currentValues.chapterId);
 
     return (
-      <div className="h-full overflow-y-auto bg-card p-8 border-l">
-        <div className="max-w-2xl mx-auto space-y-8">
-          <div className="flex items-center justify-between pb-4 border-b">
-            <div>
-              <div className="text-sm text-muted-foreground">{sub?.name || 'Subject'} &gt; {ch?.name || 'Chapter'}</div>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline">{currentValues.type}</Badge>
-                <Badge variant={getDifficultyBadgeVariant(currentValues.difficulty)}>
-                  {currentValues.difficulty}
-                </Badge>
-                <Badge variant={currentValues.activeStatus === "Active" ? "secondary" : "outline"}>
-                  {currentValues.activeStatus}
-                </Badge>
-                <Badge variant="outline">{currentValues.verificationStatus}</Badge>
-                {currentValues.isPreviousYear && currentValues.previousYearMonth && currentValues.previousYearYear && (
-                  <Badge variant="outline">{currentValues.previousYearMonth} {currentValues.previousYearYear} PYQ</Badge>
-                )}
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setPreviewMode(false)}>
-              <X className="h-4 w-4 mr-2" /> Close
+      <div className="h-full overflow-y-auto bg-card px-6 py-4 border-l">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex justify-end mb-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setPreviewMode(false)}
+              aria-label="Close preview"
+            >
+              <X className="h-4 w-4" />
             </Button>
           </div>
 
@@ -776,6 +642,18 @@ export default function QuestionEditor() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {(currentValues.solutionText?.trim() || currentValues._solutionLocalPreview) && (
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-base font-semibold">Solution</h3>
+                <div className="prose dark:prose-invert max-w-none">
+                  <LatexRenderer content={currentValues.solutionText || "No solution text provided."} />
+                </div>
+                {currentValues._solutionLocalPreview && (
+                  <img src={currentValues._solutionLocalPreview} alt="Solution" className="max-w-sm rounded-md border" />
+                )}
               </div>
             )}
 
@@ -974,59 +852,37 @@ export default function QuestionEditor() {
                                     const nextValue = Boolean(checked);
                                     field.onChange(nextValue);
                                     if (!nextValue) {
-                                      form.setValue("previousYearYear", undefined, { shouldDirty: true, shouldTouch: true });
-                                      form.setValue("previousYearMonth", undefined, { shouldDirty: true, shouldTouch: true });
+                                      form.setValue("previousYearDateText", "", { shouldDirty: true, shouldTouch: true });
                                     }
                                   }}
                                 />
                               </FormControl>
                               <div>
                                 <FormLabel>Is Previous Year Question</FormLabel>
-                                <FormDescription className="mt-1">Enable to select exam year and month.</FormDescription>
+                                <FormDescription className="mt-1">Enable to enter exam date info as free text.</FormDescription>
                               </div>
                             </FormItem>
                           )}
                         />
 
                         {watchIsPreviousYear && (
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 gap-4">
                             <FormField
                               control={form.control}
-                              name="previousYearYear"
+                              name="previousYearDateText"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Year</FormLabel>
+                                  <FormLabel>Previous Year Date (Free Text)</FormLabel>
                                   <FormControl>
-                                    <TypeaheadStringSelect
-                                      value={field.value ? String(field.value) : ""}
-                                      onChange={(v) => field.onChange(Number(v))}
-                                      options={YEAR_OPTIONS}
-                                      placeholder="Select year"
-                                      searchPlaceholder="Type year..."
-                                      emptyText="No matching year"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="previousYearMonth"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Month</FormLabel>
-                                  <FormControl>
-                                    <TypeaheadStringSelect
+                                    <Input
+                                      placeholder="e.g., March 2024 or 12-03-2024"
+                                      {...field}
                                       value={field.value || ""}
-                                      onChange={field.onChange}
-                                      options={MONTH_OPTIONS}
-                                      placeholder="Select month"
-                                      searchPlaceholder="Type month (e.g. j)..."
-                                      emptyText="No matching month"
                                     />
                                   </FormControl>
+                                  <FormDescription>
+                                    Enter any format you prefer. This value is stored exactly as typed.
+                                  </FormDescription>
                                   <FormMessage />
                                 </FormItem>
                               )}
@@ -1098,15 +954,6 @@ export default function QuestionEditor() {
                       <CardContent className="pt-6 space-y-4">
                         <div className="flex items-center justify-between">
                           <Label className="text-base font-semibold">Answer Choices</Label>
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => appendChoice({ text: "", isCorrect: false })}
-                            disabled={choices.length >= 6}
-                          >
-                            <Plus className="h-4 w-4 mr-2" /> Add Choice
-                          </Button>
                         </div>
                         
                         {form.formState.errors.choices?.root && (
@@ -1182,9 +1029,80 @@ export default function QuestionEditor() {
                             </div>
                           ))}
                         </div>
+
+                        <div className="pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => appendChoice({ text: "", isCorrect: false })}
+                            disabled={choices.length >= 6}
+                          >
+                            <Plus className="h-4 w-4 mr-2" /> Add Choice
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   )}
+
+                  <Card>
+                    <CardContent className="pt-6 space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="solutionText"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Solution (Optional)</FormLabel>
+                            <FormDescription>
+                              Use $...$ for inline math and $$...$$ for block math. Add explanation steps or final answer here.
+                            </FormDescription>
+                            <FormControl>
+                              <Textarea
+                                placeholder="e.g., Differentiate using power rule: $$\\frac{d}{dx}x^2 = 2x$$"
+                                className="min-h-[140px] font-mono text-sm"
+                                {...field}
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="space-y-2">
+                        <Label>Solution Image (Optional)</Label>
+                        <div className="flex items-start gap-4">
+                          {form.watch("_solutionLocalPreview") ? (
+                            <div className="relative inline-block border rounded-md p-1">
+                              <img
+                                src={form.watch("_solutionLocalPreview")}
+                                alt="Solution preview"
+                                className="h-32 object-contain rounded"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                onClick={() => handleRemoveImage("", "solutionImage", "_solutionLocalPreview", "removeSolutionImage")}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="file"
+                                accept="image/png,image/jpeg,image/jpg"
+                                className="w-auto"
+                                onChange={(e) => handleImageChange(e, "solutionImage", "_solutionLocalPreview", "removeSolutionImage")}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </form>
               </Form>
             </div>

@@ -26,6 +26,7 @@ export const questionsTable = pgTable("questions", {
   activeStatus: text("active_status", { enum: ["Active", "Inactive"] }).notNull().default("Active"),
   verificationStatus: text("verification_status", { enum: ["Verified", "Need to Verified", "Changes Needed"] }).notNull().default("Need to Verified"),
   isPreviousYear: boolean("is_previous_year").notNull().default(false),
+  previousYearDateText: text("previous_year_date_text"),
   previousYearYear: integer("previous_year_year"),
   previousYearMonth: text("previous_year_month", {
     enum: [
@@ -47,6 +48,11 @@ export const questionsTable = pgTable("questions", {
   imageName: text("image_name"),
   imageType: text("image_type"),
   imageSize: integer("image_size"),
+  solutionText: text("solution_text"),
+  solutionImageData: bytea("solution_image_data"),
+  solutionImageName: text("solution_image_name"),
+  solutionImageType: text("solution_image_type"),
+  solutionImageSize: integer("solution_image_size"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

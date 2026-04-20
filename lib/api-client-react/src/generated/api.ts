@@ -1120,6 +1120,12 @@ export const createQuestion = async (
     `isPreviousYear`,
     createQuestionBody.isPreviousYear.toString(),
   );
+  if (createQuestionBody.previousYearDateText !== undefined) {
+    formData.append(
+      `previousYearDateText`,
+      createQuestionBody.previousYearDateText,
+    );
+  }
   if (createQuestionBody.previousYearYear !== undefined) {
     formData.append(
       `previousYearYear`,
@@ -1129,8 +1135,14 @@ export const createQuestion = async (
   if (createQuestionBody.previousYearMonth !== undefined) {
     formData.append(`previousYearMonth`, createQuestionBody.previousYearMonth);
   }
+  if (createQuestionBody.solutionText !== undefined) {
+    formData.append(`solutionText`, createQuestionBody.solutionText);
+  }
   if (createQuestionBody.image !== undefined) {
     formData.append(`image`, createQuestionBody.image);
+  }
+  if (createQuestionBody.solutionImage !== undefined) {
+    formData.append(`solutionImage`, createQuestionBody.solutionImage);
   }
 
   return customFetch<Question>(getCreateQuestionUrl(), {
@@ -1334,6 +1346,12 @@ export const updateQuestion = async (
       updateQuestionBody.isPreviousYear.toString(),
     );
   }
+  if (updateQuestionBody.previousYearDateText !== undefined) {
+    formData.append(
+      `previousYearDateText`,
+      updateQuestionBody.previousYearDateText,
+    );
+  }
   if (updateQuestionBody.previousYearYear !== undefined) {
     formData.append(
       `previousYearYear`,
@@ -1343,11 +1361,23 @@ export const updateQuestion = async (
   if (updateQuestionBody.previousYearMonth !== undefined) {
     formData.append(`previousYearMonth`, updateQuestionBody.previousYearMonth);
   }
+  if (updateQuestionBody.solutionText !== undefined) {
+    formData.append(`solutionText`, updateQuestionBody.solutionText);
+  }
   if (updateQuestionBody.image !== undefined) {
     formData.append(`image`, updateQuestionBody.image);
   }
+  if (updateQuestionBody.solutionImage !== undefined) {
+    formData.append(`solutionImage`, updateQuestionBody.solutionImage);
+  }
   if (updateQuestionBody.removeImage !== undefined) {
     formData.append(`removeImage`, updateQuestionBody.removeImage);
+  }
+  if (updateQuestionBody.removeSolutionImage !== undefined) {
+    formData.append(
+      `removeSolutionImage`,
+      updateQuestionBody.removeSolutionImage,
+    );
   }
 
   return customFetch<Question>(getUpdateQuestionUrl(id), {

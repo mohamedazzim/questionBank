@@ -225,9 +225,17 @@ export default function Questions() {
               questionsData.questions.map((question) => (
                 <TableRow key={question.id}>
                   <TableCell>
-                    <div className="flex items-start gap-2 max-w-xl">
-                      {question.imageUrl && <ImageIcon className="h-4 w-4 mt-1 shrink-0 text-muted-foreground" />}
-                      <LatexRenderer content={question.text} className="line-clamp-2 text-sm" />
+                    <div className="space-y-2 max-w-xl">
+                      <div className="flex items-start gap-2">
+                        {question.imageUrl && <ImageIcon className="h-4 w-4 mt-1 shrink-0 text-muted-foreground" />}
+                        <LatexRenderer content={question.text} className="line-clamp-2 text-sm" />
+                      </div>
+                      {(question as any).solutionText && (
+                        <div className="rounded-md border border-dashed p-2 bg-muted/20">
+                          <p className="text-[11px] font-medium text-muted-foreground mb-1">Solution</p>
+                          <LatexRenderer content={(question as any).solutionText} className="line-clamp-2 text-xs" />
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>

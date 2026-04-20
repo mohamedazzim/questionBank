@@ -822,6 +822,8 @@ components:
           enum: [Verified, "Need to Verified", "Changes Needed"]
         isPreviousYear:
           type: boolean
+        previousYearDateText:
+          type: ["string", "null"]
         previousYearYear:
           type: ["integer", "null"]
         previousYearMonth:
@@ -832,6 +834,14 @@ components:
         imageName:
           type: ["string", "null"]
         imageType:
+          type: ["string", "null"]
+        solutionText:
+          type: ["string", "null"]
+        solutionImageUrl:
+          type: ["string", "null"]
+        solutionImageName:
+          type: ["string", "null"]
+        solutionImageType:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -892,12 +902,19 @@ components:
         isPreviousYear:
           type: boolean
           default: false
+        previousYearDateText:
+          type: string
         previousYearYear:
           type: integer
         previousYearMonth:
           type: string
           enum: [January, February, March, April, May, June, July, August, September, October, November, December]
+        solutionText:
+          type: string
         image:
+          type: string
+          format: binary
+        solutionImage:
           type: string
           format: binary
       required:
@@ -929,15 +946,25 @@ components:
           enum: [Verified, "Need to Verified", "Changes Needed"]
         isPreviousYear:
           type: boolean
+        previousYearDateText:
+          type: string
         previousYearYear:
           type: integer
         previousYearMonth:
           type: string
           enum: [January, February, March, April, May, June, July, August, September, October, November, December]
+        solutionText:
+          type: string
         image:
           type: string
           format: binary
+        solutionImage:
+          type: string
+          format: binary
         removeImage:
+          type: string
+          enum: ["true", "false"]
+        removeSolutionImage:
           type: string
           enum: ["true", "false"]
 
@@ -1025,6 +1052,8 @@ components:
           enum: [Verified, "Need to Verified", "Changes Needed"]
         isPreviousYear:
           type: boolean
+        previousYearDateText:
+          type: ["string", "null"]
         previousYearYear:
           type: ["integer", "null"]
         previousYearMonth:
@@ -1035,6 +1064,14 @@ components:
         imageName:
           type: ["string", "null"]
         imageType:
+          type: ["string", "null"]
+        solutionText:
+          type: ["string", "null"]
+        solutionImageUrl:
+          type: ["string", "null"]
+        solutionImageName:
+          type: ["string", "null"]
+        solutionImageType:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -1091,6 +1128,8 @@ components:
           enum: [Verified, "Need to Verified", "Changes Needed"]
         isPreviousYear:
           type: boolean
+        previousYearDateText:
+          type: ["string", "null"]
         previousYearYear:
           type: ["integer", "null"]
         previousYearMonth:
@@ -1103,6 +1142,12 @@ components:
         imageData:
           type: ["string", "null"]
         imageType:
+          type: ["string", "null"]
+        solutionText:
+          type: ["string", "null"]
+        solutionImageData:
+          type: ["string", "null"]
+        solutionImageType:
           type: ["string", "null"]
         choices:
           type: array

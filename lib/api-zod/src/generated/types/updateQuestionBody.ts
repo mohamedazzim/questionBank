@@ -9,6 +9,7 @@ import type { UpdateQuestionBodyActiveStatus } from "./updateQuestionBodyActiveS
 import type { UpdateQuestionBodyDifficulty } from "./updateQuestionBodyDifficulty";
 import type { UpdateQuestionBodyPreviousYearMonth } from "./updateQuestionBodyPreviousYearMonth";
 import type { UpdateQuestionBodyRemoveImage } from "./updateQuestionBodyRemoveImage";
+import type { UpdateQuestionBodyRemoveSolutionImage } from "./updateQuestionBodyRemoveSolutionImage";
 import type { UpdateQuestionBodyType } from "./updateQuestionBodyType";
 import type { UpdateQuestionBodyVerificationStatus } from "./updateQuestionBodyVerificationStatus";
 
@@ -20,8 +21,12 @@ export interface UpdateQuestionBody {
   activeStatus?: UpdateQuestionBodyActiveStatus;
   verificationStatus?: UpdateQuestionBodyVerificationStatus;
   isPreviousYear?: boolean;
+  previousYearDateText?: string;
   previousYearYear?: number;
   previousYearMonth?: UpdateQuestionBodyPreviousYearMonth;
+  solutionText?: string;
   image?: Blob;
+  solutionImage?: Blob;
   removeImage?: UpdateQuestionBodyRemoveImage;
+  removeSolutionImage?: UpdateQuestionBodyRemoveSolutionImage;
 }

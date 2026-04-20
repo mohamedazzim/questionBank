@@ -57,5 +57,6 @@ export * from "./updateQuestionBodyActiveStatus";
 export * from "./updateQuestionBodyDifficulty";
 export * from "./updateQuestionBodyPreviousYearMonth";
 export * from "./updateQuestionBodyRemoveImage";
+export * from "./updateQuestionBodyRemoveSolutionImage";
 export * from "./updateQuestionBodyType";
 export * from "./updateQuestionBodyVerificationStatus";

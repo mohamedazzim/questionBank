@@ -115,6 +115,8 @@ export interface Question {
   verificationStatus?: QuestionVerificationStatus;
   isPreviousYear?: boolean;
   /** @nullable */
+  previousYearDateText?: string | null;
+  /** @nullable */
   previousYearYear?: number | null;
   /** @nullable */
   previousYearMonth?: QuestionPreviousYearMonth;
@@ -124,6 +126,14 @@ export interface Question {
   imageName?: string | null;
   /** @nullable */
   imageType?: string | null;
+  /** @nullable */
+  solutionText?: string | null;
+  /** @nullable */
+  solutionImageUrl?: string | null;
+  /** @nullable */
+  solutionImageName?: string | null;
+  /** @nullable */
+  solutionImageType?: string | null;
   createdAt: string;
   /** @nullable */
   choiceCount?: number | null;
@@ -198,9 +208,12 @@ export interface CreateQuestionBody {
   activeStatus: CreateQuestionBodyActiveStatus;
   verificationStatus: CreateQuestionBodyVerificationStatus;
   isPreviousYear: boolean;
+  previousYearDateText?: string;
   previousYearYear?: number;
   previousYearMonth?: CreateQuestionBodyPreviousYearMonth;
+  solutionText?: string;
   image?: Blob;
+  solutionImage?: Blob;
 }
 
 export type UpdateQuestionBodyType =
@@ -264,6 +277,14 @@ export const UpdateQuestionBodyRemoveImage = {
   false: "false",
 } as const;
 
+export type UpdateQuestionBodyRemoveSolutionImage =
+  (typeof UpdateQuestionBodyRemoveSolutionImage)[keyof typeof UpdateQuestionBodyRemoveSolutionImage];
+
+export const UpdateQuestionBodyRemoveSolutionImage = {
+  true: "true",
+  false: "false",
+} as const;
+
 export interface UpdateQuestionBody {
   chapterId?: number;
   text?: string;
@@ -272,10 +293,14 @@ export interface UpdateQuestionBody {
   activeStatus?: UpdateQuestionBodyActiveStatus;
   verificationStatus?: UpdateQuestionBodyVerificationStatus;
   isPreviousYear?: boolean;
+  previousYearDateText?: string;
   previousYearYear?: number;
   previousYearMonth?: UpdateQuestionBodyPreviousYearMonth;
+  solutionText?: string;
   image?: Blob;
+  solutionImage?: Blob;
   removeImage?: UpdateQuestionBodyRemoveImage;
+  removeSolutionImage?: UpdateQuestionBodyRemoveSolutionImage;
 }
 
 export interface Choice {
@@ -385,6 +410,8 @@ export interface QuestionDetail {
   verificationStatus?: QuestionDetailVerificationStatus;
   isPreviousYear?: boolean;
   /** @nullable */
+  previousYearDateText?: string | null;
+  /** @nullable */
   previousYearYear?: number | null;
   /** @nullable */
   previousYearMonth?: QuestionDetailPreviousYearMonth;
@@ -394,6 +421,14 @@ export interface QuestionDetail {
   imageName?: string | null;
   /** @nullable */
   imageType?: string | null;
+  /** @nullable */
+  solutionText?: string | null;
+  /** @nullable */
+  solutionImageUrl?: string | null;
+  /** @nullable */
+  solutionImageName?: string | null;
+  /** @nullable */
+  solutionImageType?: string | null;
   createdAt: string;
   choices: Choice[];
 }
@@ -474,6 +509,8 @@ export interface QuestionPreview {
   verificationStatus?: QuestionPreviewVerificationStatus;
   isPreviousYear?: boolean;
   /** @nullable */
+  previousYearDateText?: string | null;
+  /** @nullable */
   previousYearYear?: number | null;
   /** @nullable */
   previousYearMonth?: QuestionPreviewPreviousYearMonth;
@@ -485,6 +522,12 @@ export interface QuestionPreview {
   imageData?: string | null;
   /** @nullable */
   imageType?: string | null;
+  /** @nullable */
+  solutionText?: string | null;
+  /** @nullable */
+  solutionImageData?: string | null;
+  /** @nullable */
+  solutionImageType?: string | null;
   choices: ChoicePreview[];
 }
 

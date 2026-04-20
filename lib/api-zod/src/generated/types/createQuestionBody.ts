@@ -19,7 +19,10 @@ export interface CreateQuestionBody {
   activeStatus: CreateQuestionBodyActiveStatus;
   verificationStatus: CreateQuestionBodyVerificationStatus;
   isPreviousYear: boolean;
+  previousYearDateText?: string;
   previousYearYear?: number;
   previousYearMonth?: CreateQuestionBodyPreviousYearMonth;
+  solutionText?: string;
   image?: Blob;
+  solutionImage?: Blob;
 }

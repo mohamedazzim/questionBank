@@ -28,6 +28,8 @@ export interface QuestionDetail {
   verificationStatus?: QuestionDetailVerificationStatus;
   isPreviousYear?: boolean;
   /** @nullable */
+  previousYearDateText?: string | null;
+  /** @nullable */
   previousYearYear?: number | null;
   /** @nullable */
   previousYearMonth?: QuestionDetailPreviousYearMonth;
@@ -37,6 +39,14 @@ export interface QuestionDetail {
   imageName?: string | null;
   /** @nullable */
   imageType?: string | null;
+  /** @nullable */
+  solutionText?: string | null;
+  /** @nullable */
+  solutionImageUrl?: string | null;
+  /** @nullable */
+  solutionImageName?: string | null;
+  /** @nullable */
+  solutionImageType?: string | null;
   createdAt: Date;
   choices: Choice[];
 }
