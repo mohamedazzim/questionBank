@@ -179,9 +179,29 @@ export const ListQuestionsResponse = zod.object({
       text: zod.string(),
       type: zod.enum(["MCQ", "FILLUP"]),
       difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
+      activeStatus: zod.enum(["Active", "Inactive"]).optional(),
       verificationStatus: zod
         .enum(["Verified", "Need to Verified", "Changes Needed"])
         .optional(),
+      isPreviousYear: zod.boolean().optional(),
+      previousYearYear: zod.number().nullish(),
+      previousYearMonth: zod
+        .union([
+          zod.literal("January"),
+          zod.literal("February"),
+          zod.literal("March"),
+          zod.literal("April"),
+          zod.literal("May"),
+          zod.literal("June"),
+          zod.literal("July"),
+          zod.literal("August"),
+          zod.literal("September"),
+          zod.literal("October"),
+          zod.literal("November"),
+          zod.literal("December"),
+          zod.literal(null),
+        ])
+        .nullish(),
       imageUrl: zod.string().nullish(),
       imageName: zod.string().nullish(),
       imageType: zod.string().nullish(),
@@ -198,16 +218,41 @@ export const ListQuestionsResponse = zod.object({
 /**
  * @summary Create a question (with optional image upload)
  */
+export const createQuestionBodyActiveStatusDefault = `Active`;
 export const createQuestionBodyVerificationStatusDefault = `Need to Verified`;
+export const createQuestionBodyIsPreviousYearDefault = false;
 
 export const CreateQuestionBody = zod.object({
   chapterId: zod.number(),
   text: zod.string().optional(),
   type: zod.enum(["MCQ", "FILLUP"]),
   difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
+  activeStatus: zod
+    .enum(["Active", "Inactive"])
+    .default(createQuestionBodyActiveStatusDefault),
   verificationStatus: zod
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .default(createQuestionBodyVerificationStatusDefault),
+  isPreviousYear: zod
+    .boolean()
+    .default(createQuestionBodyIsPreviousYearDefault),
+  previousYearYear: zod.number().optional(),
+  previousYearMonth: zod
+    .enum([
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ])
+    .optional(),
   image: zod.instanceof(File).optional(),
 });
 
@@ -227,9 +272,29 @@ export const GetQuestionResponse = zod.object({
   text: zod.string(),
   type: zod.enum(["MCQ", "FILLUP"]),
   difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
+  activeStatus: zod.enum(["Active", "Inactive"]).optional(),
   verificationStatus: zod
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
+  isPreviousYear: zod.boolean().optional(),
+  previousYearYear: zod.number().nullish(),
+  previousYearMonth: zod
+    .union([
+      zod.literal("January"),
+      zod.literal("February"),
+      zod.literal("March"),
+      zod.literal("April"),
+      zod.literal("May"),
+      zod.literal("June"),
+      zod.literal("July"),
+      zod.literal("August"),
+      zod.literal("September"),
+      zod.literal("October"),
+      zod.literal("November"),
+      zod.literal("December"),
+      zod.literal(null),
+    ])
+    .nullish(),
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),
@@ -259,8 +324,27 @@ export const UpdateQuestionBody = zod.object({
   text: zod.string().optional(),
   type: zod.enum(["MCQ", "FILLUP"]).optional(),
   difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]).optional(),
+  activeStatus: zod.enum(["Active", "Inactive"]).optional(),
   verificationStatus: zod
     .enum(["Verified", "Need to Verified", "Changes Needed"])
+    .optional(),
+  isPreviousYear: zod.boolean().optional(),
+  previousYearYear: zod.number().optional(),
+  previousYearMonth: zod
+    .enum([
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ])
     .optional(),
   image: zod.instanceof(File).optional(),
   removeImage: zod.enum(["true", "false"]).optional(),
@@ -275,9 +359,29 @@ export const UpdateQuestionResponse = zod.object({
   text: zod.string(),
   type: zod.enum(["MCQ", "FILLUP"]),
   difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
+  activeStatus: zod.enum(["Active", "Inactive"]).optional(),
   verificationStatus: zod
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
+  isPreviousYear: zod.boolean().optional(),
+  previousYearYear: zod.number().nullish(),
+  previousYearMonth: zod
+    .union([
+      zod.literal("January"),
+      zod.literal("February"),
+      zod.literal("March"),
+      zod.literal("April"),
+      zod.literal("May"),
+      zod.literal("June"),
+      zod.literal("July"),
+      zod.literal("August"),
+      zod.literal("September"),
+      zod.literal("October"),
+      zod.literal("November"),
+      zod.literal("December"),
+      zod.literal(null),
+    ])
+    .nullish(),
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),
@@ -311,9 +415,29 @@ export const PreviewQuestionResponse = zod.object({
   text: zod.string(),
   type: zod.enum(["MCQ", "FILLUP"]),
   difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
+  activeStatus: zod.enum(["Active", "Inactive"]).optional(),
   verificationStatus: zod
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
+  isPreviousYear: zod.boolean().optional(),
+  previousYearYear: zod.number().nullish(),
+  previousYearMonth: zod
+    .union([
+      zod.literal("January"),
+      zod.literal("February"),
+      zod.literal("March"),
+      zod.literal("April"),
+      zod.literal("May"),
+      zod.literal("June"),
+      zod.literal("July"),
+      zod.literal("August"),
+      zod.literal("September"),
+      zod.literal("October"),
+      zod.literal("November"),
+      zod.literal("December"),
+      zod.literal(null),
+    ])
+    .nullish(),
   chapterName: zod.string().nullish(),
   subjectName: zod.string().nullish(),
   imageData: zod.string().nullish(),
@@ -427,9 +551,29 @@ export const GetRecentQuestionsResponseItem = zod.object({
   text: zod.string(),
   type: zod.enum(["MCQ", "FILLUP"]),
   difficulty: zod.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
+  activeStatus: zod.enum(["Active", "Inactive"]).optional(),
   verificationStatus: zod
     .enum(["Verified", "Need to Verified", "Changes Needed"])
     .optional(),
+  isPreviousYear: zod.boolean().optional(),
+  previousYearYear: zod.number().nullish(),
+  previousYearMonth: zod
+    .union([
+      zod.literal("January"),
+      zod.literal("February"),
+      zod.literal("March"),
+      zod.literal("April"),
+      zod.literal("May"),
+      zod.literal("June"),
+      zod.literal("July"),
+      zod.literal("August"),
+      zod.literal("September"),
+      zod.literal("October"),
+      zod.literal("November"),
+      zod.literal("December"),
+      zod.literal(null),
+    ])
+    .nullish(),
   imageUrl: zod.string().nullish(),
   imageName: zod.string().nullish(),
   imageType: zod.string().nullish(),

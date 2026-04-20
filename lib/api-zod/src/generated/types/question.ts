@@ -5,7 +5,9 @@
  * Question Bank API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { QuestionActiveStatus } from "./questionActiveStatus";
 import type { QuestionDifficulty } from "./questionDifficulty";
+import type { QuestionPreviousYearMonth } from "./questionPreviousYearMonth";
 import type { QuestionType } from "./questionType";
 import type { QuestionVerificationStatus } from "./questionVerificationStatus";
 
@@ -21,7 +23,13 @@ export interface Question {
   text: string;
   type: QuestionType;
   difficulty: QuestionDifficulty;
+  activeStatus?: QuestionActiveStatus;
   verificationStatus?: QuestionVerificationStatus;
+  isPreviousYear?: boolean;
+  /** @nullable */
+  previousYearYear?: number | null;
+  /** @nullable */
+  previousYearMonth?: QuestionPreviousYearMonth;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */

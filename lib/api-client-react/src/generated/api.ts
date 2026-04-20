@@ -1114,7 +1114,21 @@ export const createQuestion = async (
   }
   formData.append(`type`, createQuestionBody.type);
   formData.append(`difficulty`, createQuestionBody.difficulty);
+  formData.append(`activeStatus`, createQuestionBody.activeStatus);
   formData.append(`verificationStatus`, createQuestionBody.verificationStatus);
+  formData.append(
+    `isPreviousYear`,
+    createQuestionBody.isPreviousYear.toString(),
+  );
+  if (createQuestionBody.previousYearYear !== undefined) {
+    formData.append(
+      `previousYearYear`,
+      createQuestionBody.previousYearYear.toString(),
+    );
+  }
+  if (createQuestionBody.previousYearMonth !== undefined) {
+    formData.append(`previousYearMonth`, createQuestionBody.previousYearMonth);
+  }
   if (createQuestionBody.image !== undefined) {
     formData.append(`image`, createQuestionBody.image);
   }
@@ -1305,11 +1319,29 @@ export const updateQuestion = async (
   if (updateQuestionBody.difficulty !== undefined) {
     formData.append(`difficulty`, updateQuestionBody.difficulty);
   }
+  if (updateQuestionBody.activeStatus !== undefined) {
+    formData.append(`activeStatus`, updateQuestionBody.activeStatus);
+  }
   if (updateQuestionBody.verificationStatus !== undefined) {
     formData.append(
       `verificationStatus`,
       updateQuestionBody.verificationStatus,
     );
+  }
+  if (updateQuestionBody.isPreviousYear !== undefined) {
+    formData.append(
+      `isPreviousYear`,
+      updateQuestionBody.isPreviousYear.toString(),
+    );
+  }
+  if (updateQuestionBody.previousYearYear !== undefined) {
+    formData.append(
+      `previousYearYear`,
+      updateQuestionBody.previousYearYear.toString(),
+    );
+  }
+  if (updateQuestionBody.previousYearMonth !== undefined) {
+    formData.append(`previousYearMonth`, updateQuestionBody.previousYearMonth);
   }
   if (updateQuestionBody.image !== undefined) {
     formData.append(`image`, updateQuestionBody.image);

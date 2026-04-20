@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Choice } from "./choice";
+import type { QuestionDetailActiveStatus } from "./questionDetailActiveStatus";
 import type { QuestionDetailDifficulty } from "./questionDetailDifficulty";
+import type { QuestionDetailPreviousYearMonth } from "./questionDetailPreviousYearMonth";
 import type { QuestionDetailType } from "./questionDetailType";
 import type { QuestionDetailVerificationStatus } from "./questionDetailVerificationStatus";
 
@@ -22,7 +24,13 @@ export interface QuestionDetail {
   text: string;
   type: QuestionDetailType;
   difficulty: QuestionDetailDifficulty;
+  activeStatus?: QuestionDetailActiveStatus;
   verificationStatus?: QuestionDetailVerificationStatus;
+  isPreviousYear?: boolean;
+  /** @nullable */
+  previousYearYear?: number | null;
+  /** @nullable */
+  previousYearMonth?: QuestionDetailPreviousYearMonth;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */

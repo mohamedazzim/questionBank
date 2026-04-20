@@ -60,6 +60,14 @@ export const QuestionDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type QuestionActiveStatus =
+  (typeof QuestionActiveStatus)[keyof typeof QuestionActiveStatus];
+
+export const QuestionActiveStatus = {
+  Active: "Active",
+  Inactive: "Inactive",
+} as const;
+
 export type QuestionVerificationStatus =
   (typeof QuestionVerificationStatus)[keyof typeof QuestionVerificationStatus];
 
@@ -67,6 +75,28 @@ export const QuestionVerificationStatus = {
   Verified: "Verified",
   Need_to_Verified: "Need to Verified",
   Changes_Needed: "Changes Needed",
+} as const;
+
+/**
+ * @nullable
+ */
+export type QuestionPreviousYearMonth =
+  | (typeof QuestionPreviousYearMonth)[keyof typeof QuestionPreviousYearMonth]
+  | null;
+
+export const QuestionPreviousYearMonth = {
+  January: "January",
+  February: "February",
+  March: "March",
+  April: "April",
+  May: "May",
+  June: "June",
+  July: "July",
+  August: "August",
+  September: "September",
+  October: "October",
+  November: "November",
+  December: "December",
 } as const;
 
 export interface Question {
@@ -81,7 +111,13 @@ export interface Question {
   text: string;
   type: QuestionType;
   difficulty: QuestionDifficulty;
+  activeStatus?: QuestionActiveStatus;
   verificationStatus?: QuestionVerificationStatus;
+  isPreviousYear?: boolean;
+  /** @nullable */
+  previousYearYear?: number | null;
+  /** @nullable */
+  previousYearMonth?: QuestionPreviousYearMonth;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
@@ -119,6 +155,14 @@ export const CreateQuestionBodyDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type CreateQuestionBodyActiveStatus =
+  (typeof CreateQuestionBodyActiveStatus)[keyof typeof CreateQuestionBodyActiveStatus];
+
+export const CreateQuestionBodyActiveStatus = {
+  Active: "Active",
+  Inactive: "Inactive",
+} as const;
+
 export type CreateQuestionBodyVerificationStatus =
   (typeof CreateQuestionBodyVerificationStatus)[keyof typeof CreateQuestionBodyVerificationStatus];
 
@@ -128,12 +172,34 @@ export const CreateQuestionBodyVerificationStatus = {
   Changes_Needed: "Changes Needed",
 } as const;
 
+export type CreateQuestionBodyPreviousYearMonth =
+  (typeof CreateQuestionBodyPreviousYearMonth)[keyof typeof CreateQuestionBodyPreviousYearMonth];
+
+export const CreateQuestionBodyPreviousYearMonth = {
+  January: "January",
+  February: "February",
+  March: "March",
+  April: "April",
+  May: "May",
+  June: "June",
+  July: "July",
+  August: "August",
+  September: "September",
+  October: "October",
+  November: "November",
+  December: "December",
+} as const;
+
 export interface CreateQuestionBody {
   chapterId: number;
   text?: string;
   type: CreateQuestionBodyType;
   difficulty: CreateQuestionBodyDifficulty;
+  activeStatus: CreateQuestionBodyActiveStatus;
   verificationStatus: CreateQuestionBodyVerificationStatus;
+  isPreviousYear: boolean;
+  previousYearYear?: number;
+  previousYearMonth?: CreateQuestionBodyPreviousYearMonth;
   image?: Blob;
 }
 
@@ -155,6 +221,14 @@ export const UpdateQuestionBodyDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type UpdateQuestionBodyActiveStatus =
+  (typeof UpdateQuestionBodyActiveStatus)[keyof typeof UpdateQuestionBodyActiveStatus];
+
+export const UpdateQuestionBodyActiveStatus = {
+  Active: "Active",
+  Inactive: "Inactive",
+} as const;
+
 export type UpdateQuestionBodyVerificationStatus =
   (typeof UpdateQuestionBodyVerificationStatus)[keyof typeof UpdateQuestionBodyVerificationStatus];
 
@@ -162,6 +236,24 @@ export const UpdateQuestionBodyVerificationStatus = {
   Verified: "Verified",
   Need_to_Verified: "Need to Verified",
   Changes_Needed: "Changes Needed",
+} as const;
+
+export type UpdateQuestionBodyPreviousYearMonth =
+  (typeof UpdateQuestionBodyPreviousYearMonth)[keyof typeof UpdateQuestionBodyPreviousYearMonth];
+
+export const UpdateQuestionBodyPreviousYearMonth = {
+  January: "January",
+  February: "February",
+  March: "March",
+  April: "April",
+  May: "May",
+  June: "June",
+  July: "July",
+  August: "August",
+  September: "September",
+  October: "October",
+  November: "November",
+  December: "December",
 } as const;
 
 export type UpdateQuestionBodyRemoveImage =
@@ -177,7 +269,11 @@ export interface UpdateQuestionBody {
   text?: string;
   type?: UpdateQuestionBodyType;
   difficulty?: UpdateQuestionBodyDifficulty;
+  activeStatus?: UpdateQuestionBodyActiveStatus;
   verificationStatus?: UpdateQuestionBodyVerificationStatus;
+  isPreviousYear?: boolean;
+  previousYearYear?: number;
+  previousYearMonth?: UpdateQuestionBodyPreviousYearMonth;
   image?: Blob;
   removeImage?: UpdateQuestionBodyRemoveImage;
 }
@@ -234,6 +330,14 @@ export const QuestionDetailDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type QuestionDetailActiveStatus =
+  (typeof QuestionDetailActiveStatus)[keyof typeof QuestionDetailActiveStatus];
+
+export const QuestionDetailActiveStatus = {
+  Active: "Active",
+  Inactive: "Inactive",
+} as const;
+
 export type QuestionDetailVerificationStatus =
   (typeof QuestionDetailVerificationStatus)[keyof typeof QuestionDetailVerificationStatus];
 
@@ -241,6 +345,28 @@ export const QuestionDetailVerificationStatus = {
   Verified: "Verified",
   Need_to_Verified: "Need to Verified",
   Changes_Needed: "Changes Needed",
+} as const;
+
+/**
+ * @nullable
+ */
+export type QuestionDetailPreviousYearMonth =
+  | (typeof QuestionDetailPreviousYearMonth)[keyof typeof QuestionDetailPreviousYearMonth]
+  | null;
+
+export const QuestionDetailPreviousYearMonth = {
+  January: "January",
+  February: "February",
+  March: "March",
+  April: "April",
+  May: "May",
+  June: "June",
+  July: "July",
+  August: "August",
+  September: "September",
+  October: "October",
+  November: "November",
+  December: "December",
 } as const;
 
 export interface QuestionDetail {
@@ -255,7 +381,13 @@ export interface QuestionDetail {
   text: string;
   type: QuestionDetailType;
   difficulty: QuestionDetailDifficulty;
+  activeStatus?: QuestionDetailActiveStatus;
   verificationStatus?: QuestionDetailVerificationStatus;
+  isPreviousYear?: boolean;
+  /** @nullable */
+  previousYearYear?: number | null;
+  /** @nullable */
+  previousYearMonth?: QuestionDetailPreviousYearMonth;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
@@ -294,6 +426,14 @@ export const QuestionPreviewDifficulty = {
   UNLABLED: "UNLABLED",
 } as const;
 
+export type QuestionPreviewActiveStatus =
+  (typeof QuestionPreviewActiveStatus)[keyof typeof QuestionPreviewActiveStatus];
+
+export const QuestionPreviewActiveStatus = {
+  Active: "Active",
+  Inactive: "Inactive",
+} as const;
+
 export type QuestionPreviewVerificationStatus =
   (typeof QuestionPreviewVerificationStatus)[keyof typeof QuestionPreviewVerificationStatus];
 
@@ -303,12 +443,40 @@ export const QuestionPreviewVerificationStatus = {
   Changes_Needed: "Changes Needed",
 } as const;
 
+/**
+ * @nullable
+ */
+export type QuestionPreviewPreviousYearMonth =
+  | (typeof QuestionPreviewPreviousYearMonth)[keyof typeof QuestionPreviewPreviousYearMonth]
+  | null;
+
+export const QuestionPreviewPreviousYearMonth = {
+  January: "January",
+  February: "February",
+  March: "March",
+  April: "April",
+  May: "May",
+  June: "June",
+  July: "July",
+  August: "August",
+  September: "September",
+  October: "October",
+  November: "November",
+  December: "December",
+} as const;
+
 export interface QuestionPreview {
   id: number;
   text: string;
   type: QuestionPreviewType;
   difficulty: QuestionPreviewDifficulty;
+  activeStatus?: QuestionPreviewActiveStatus;
   verificationStatus?: QuestionPreviewVerificationStatus;
+  isPreviousYear?: boolean;
+  /** @nullable */
+  previousYearYear?: number | null;
+  /** @nullable */
+  previousYearMonth?: QuestionPreviewPreviousYearMonth;
   /** @nullable */
   chapterName?: string | null;
   /** @nullable */

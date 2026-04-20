@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ChoicePreview } from "./choicePreview";
+import type { QuestionPreviewActiveStatus } from "./questionPreviewActiveStatus";
 import type { QuestionPreviewDifficulty } from "./questionPreviewDifficulty";
+import type { QuestionPreviewPreviousYearMonth } from "./questionPreviewPreviousYearMonth";
 import type { QuestionPreviewType } from "./questionPreviewType";
 import type { QuestionPreviewVerificationStatus } from "./questionPreviewVerificationStatus";
 
@@ -15,7 +17,13 @@ export interface QuestionPreview {
   text: string;
   type: QuestionPreviewType;
   difficulty: QuestionPreviewDifficulty;
+  activeStatus?: QuestionPreviewActiveStatus;
   verificationStatus?: QuestionPreviewVerificationStatus;
+  isPreviousYear?: boolean;
+  /** @nullable */
+  previousYearYear?: number | null;
+  /** @nullable */
+  previousYearMonth?: QuestionPreviewPreviousYearMonth;
   /** @nullable */
   chapterName?: string | null;
   /** @nullable */

@@ -814,9 +814,19 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        activeStatus:
+          type: string
+          enum: [Active, Inactive]
         verificationStatus:
           type: string
           enum: [Verified, "Need to Verified", "Changes Needed"]
+        isPreviousYear:
+          type: boolean
+        previousYearYear:
+          type: ["integer", "null"]
+        previousYearMonth:
+          type: ["string", "null"]
+          enum: [January, February, March, April, May, June, July, August, September, October, November, December, null]
         imageUrl:
           type: ["string", "null"]
         imageName:
@@ -871,10 +881,22 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        activeStatus:
+          type: string
+          enum: [Active, Inactive]
+          default: Active
         verificationStatus:
           type: string
           enum: [Verified, "Need to Verified", "Changes Needed"]
           default: "Need to Verified"
+        isPreviousYear:
+          type: boolean
+          default: false
+        previousYearYear:
+          type: integer
+        previousYearMonth:
+          type: string
+          enum: [January, February, March, April, May, June, July, August, September, October, November, December]
         image:
           type: string
           format: binary
@@ -882,7 +904,9 @@ components:
         - chapterId
         - type
         - difficulty
+        - activeStatus
         - verificationStatus
+        - isPreviousYear
 
     UpdateQuestionBody:
       type: object
@@ -897,9 +921,19 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        activeStatus:
+          type: string
+          enum: [Active, Inactive]
         verificationStatus:
           type: string
           enum: [Verified, "Need to Verified", "Changes Needed"]
+        isPreviousYear:
+          type: boolean
+        previousYearYear:
+          type: integer
+        previousYearMonth:
+          type: string
+          enum: [January, February, March, April, May, June, July, August, September, October, November, December]
         image:
           type: string
           format: binary
@@ -983,9 +1017,19 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        activeStatus:
+          type: string
+          enum: [Active, Inactive]
         verificationStatus:
           type: string
           enum: [Verified, "Need to Verified", "Changes Needed"]
+        isPreviousYear:
+          type: boolean
+        previousYearYear:
+          type: ["integer", "null"]
+        previousYearMonth:
+          type: ["string", "null"]
+          enum: [January, February, March, April, May, June, July, August, September, October, November, December, null]
         imageUrl:
           type: ["string", "null"]
         imageName:
@@ -1039,9 +1083,19 @@ components:
         difficulty:
           type: string
           enum: [EASY, MEDIUM, HARD, UNLABLED]
+        activeStatus:
+          type: string
+          enum: [Active, Inactive]
         verificationStatus:
           type: string
           enum: [Verified, "Need to Verified", "Changes Needed"]
+        isPreviousYear:
+          type: boolean
+        previousYearYear:
+          type: ["integer", "null"]
+        previousYearMonth:
+          type: ["string", "null"]
+          enum: [January, February, March, April, May, June, July, August, September, October, November, December, null]
         chapterName:
           type: ["string", "null"]
         subjectName:

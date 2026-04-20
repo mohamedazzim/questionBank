@@ -14,9 +14,32 @@ import { upload } from "../lib/multer";
 const router: IRouter = Router();
 const VALID_QUESTION_TYPES = ["MCQ", "FILLUP"];
 const VALID_DIFFICULTIES = ["EASY", "MEDIUM", "HARD", "UNLABLED"];
+const VALID_ACTIVE_STATUSES = ["Active", "Inactive"];
 const VALID_VERIFICATION_STATUSES = ["Verified", "Need to Verified", "Changes Needed"];
+const VALID_PREVIOUS_YEAR_MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 const normalizeText = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+
+const parseBooleanInput = (value: unknown): boolean | undefined => {
+  if (value === true || value === false) return value;
+  if (typeof value !== "string") return undefined;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return undefined;
+};
 
 router.get("/questions", async (req, res): Promise<void> => {
   const query = ListQuestionsQueryParams.safeParse(req.query);
@@ -54,7 +77,11 @@ router.get("/questions", async (req, res): Promise<void> => {
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
+      activeStatus: questionsTable.activeStatus,
       verificationStatus: questionsTable.verificationStatus,
+      isPreviousYear: questionsTable.isPreviousYear,
+      previousYearYear: questionsTable.previousYearYear,
+      previousYearMonth: questionsTable.previousYearMonth,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -68,7 +95,8 @@ router.get("/questions", async (req, res): Promise<void> => {
     .where(whereClause)
     .groupBy(
       questionsTable.id, questionsTable.chapterId, questionsTable.text,
-      questionsTable.type, questionsTable.difficulty, questionsTable.verificationStatus, questionsTable.imageName,
+      questionsTable.type, questionsTable.difficulty, questionsTable.activeStatus, questionsTable.verificationStatus,
+      questionsTable.isPreviousYear, questionsTable.previousYearYear, questionsTable.previousYearMonth, questionsTable.imageName,
       questionsTable.imageType, questionsTable.createdAt,
       chaptersTable.name, chaptersTable.subjectId, subjectsTable.name
     )
@@ -96,15 +124,35 @@ router.post("/questions", upload.single("image"), async (req, res): Promise<void
     return;
   }
 
+  const activeStatus = body.activeStatus || "Active";
   const verificationStatus = body.verificationStatus || "Need to Verified";
+  const parsedIsPreviousYear = parseBooleanInput(body.isPreviousYear);
+  const isPreviousYear = parsedIsPreviousYear ?? false;
+  const previousYearYearRaw = body.previousYearYear;
+  const previousYearYear = previousYearYearRaw != null && previousYearYearRaw !== ""
+    ? parseInt(previousYearYearRaw, 10)
+    : null;
+  const previousYearMonth = typeof body.previousYearMonth === "string" && body.previousYearMonth.trim()
+    ? body.previousYearMonth.trim()
+    : null;
 
   if (!normalizedText && !imageFile) {
     res.status(400).json({ error: "Question must include text or an image" });
     return;
   }
 
-  if (!VALID_QUESTION_TYPES.includes(body.type) || !VALID_DIFFICULTIES.includes(body.difficulty) || !VALID_VERIFICATION_STATUSES.includes(verificationStatus)) {
-    res.status(400).json({ error: "Invalid type, difficulty, or verificationStatus" });
+  if (!VALID_QUESTION_TYPES.includes(body.type) || !VALID_DIFFICULTIES.includes(body.difficulty) || !VALID_ACTIVE_STATUSES.includes(activeStatus) || !VALID_VERIFICATION_STATUSES.includes(verificationStatus)) {
+    res.status(400).json({ error: "Invalid type, difficulty, activeStatus, or verificationStatus" });
+    return;
+  }
+
+  if (isPreviousYear) {
+    if (!Number.isInteger(previousYearYear) || !previousYearMonth || !VALID_PREVIOUS_YEAR_MONTHS.includes(previousYearMonth)) {
+      res.status(400).json({ error: "When isPreviousYear is true, previousYearYear and previousYearMonth are required." });
+      return;
+    }
+  } else if (previousYearMonth && !VALID_PREVIOUS_YEAR_MONTHS.includes(previousYearMonth)) {
+    res.status(400).json({ error: "Invalid previousYearMonth" });
     return;
   }
 
@@ -122,7 +170,11 @@ router.post("/questions", upload.single("image"), async (req, res): Promise<void
       text: normalizedText,
       type: body.type,
       difficulty: body.difficulty,
+      activeStatus,
       verificationStatus,
+      isPreviousYear,
+      previousYearYear: isPreviousYear ? previousYearYear : null,
+      previousYearMonth: isPreviousYear ? previousYearMonth : null,
       imageData: imageFile ? imageFile.buffer : null,
       imageName: imageFile ? imageFile.originalname : null,
       imageType: imageFile ? imageFile.mimetype : null,
@@ -159,7 +211,11 @@ router.get("/questions/:id", async (req, res): Promise<void> => {
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
+      activeStatus: questionsTable.activeStatus,
       verificationStatus: questionsTable.verificationStatus,
+      isPreviousYear: questionsTable.isPreviousYear,
+      previousYearYear: questionsTable.previousYearYear,
+      previousYearMonth: questionsTable.previousYearMonth,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -210,6 +266,9 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
       text: questionsTable.text,
       imageName: questionsTable.imageName,
       chapterId: questionsTable.chapterId,
+      isPreviousYear: questionsTable.isPreviousYear,
+      previousYearYear: questionsTable.previousYearYear,
+      previousYearMonth: questionsTable.previousYearMonth,
     })
     .from(questionsTable)
     .where(eq(questionsTable.id, params.data.id));
@@ -229,9 +288,47 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
     return;
   }
 
+  if (body.activeStatus && !VALID_ACTIVE_STATUSES.includes(body.activeStatus)) {
+    res.status(400).json({ error: "Invalid activeStatus" });
+    return;
+  }
+
   if (body.verificationStatus && !VALID_VERIFICATION_STATUSES.includes(body.verificationStatus)) {
     res.status(400).json({ error: "Invalid verificationStatus" });
     return;
+  }
+
+  const parsedIsPreviousYear = body.isPreviousYear != null ? parseBooleanInput(body.isPreviousYear) : undefined;
+  if (body.isPreviousYear != null && parsedIsPreviousYear === undefined) {
+    res.status(400).json({ error: "Invalid isPreviousYear" });
+    return;
+  }
+
+  const parsedPreviousYearYear = body.previousYearYear != null
+    ? (body.previousYearYear === "" ? null : parseInt(body.previousYearYear, 10))
+    : undefined;
+  if (parsedPreviousYearYear !== undefined && parsedPreviousYearYear !== null && Number.isNaN(parsedPreviousYearYear)) {
+    res.status(400).json({ error: "Invalid previousYearYear" });
+    return;
+  }
+
+  const parsedPreviousYearMonth = body.previousYearMonth != null
+    ? (typeof body.previousYearMonth === "string" && body.previousYearMonth.trim() ? body.previousYearMonth.trim() : null)
+    : undefined;
+  if (parsedPreviousYearMonth !== undefined && parsedPreviousYearMonth !== null && !VALID_PREVIOUS_YEAR_MONTHS.includes(parsedPreviousYearMonth)) {
+    res.status(400).json({ error: "Invalid previousYearMonth" });
+    return;
+  }
+
+  const nextIsPreviousYear = parsedIsPreviousYear ?? existingQuestion.isPreviousYear;
+  const nextPreviousYearYear = parsedPreviousYearYear !== undefined ? parsedPreviousYearYear : existingQuestion.previousYearYear;
+  const nextPreviousYearMonth = parsedPreviousYearMonth !== undefined ? parsedPreviousYearMonth : existingQuestion.previousYearMonth;
+
+  if (nextIsPreviousYear) {
+    if (!Number.isInteger(nextPreviousYearYear) || !nextPreviousYearMonth || !VALID_PREVIOUS_YEAR_MONTHS.includes(nextPreviousYearMonth)) {
+      res.status(400).json({ error: "When isPreviousYear is true, previousYearYear and previousYearMonth are required." });
+      return;
+    }
   }
 
   if (body.chapterId) {
@@ -259,8 +356,18 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
   if (body.text != null) updateData.text = normalizeText(body.text);
   if (body.type) updateData.type = body.type;
   if (body.difficulty) updateData.difficulty = body.difficulty;
+  if (body.activeStatus) updateData.activeStatus = body.activeStatus;
   if (body.verificationStatus) updateData.verificationStatus = body.verificationStatus;
   if (body.chapterId) updateData.chapterId = parseInt(body.chapterId, 10);
+  if (parsedIsPreviousYear !== undefined) updateData.isPreviousYear = parsedIsPreviousYear;
+  if (parsedPreviousYearYear !== undefined) updateData.previousYearYear = parsedPreviousYearYear;
+  if (parsedPreviousYearMonth !== undefined) updateData.previousYearMonth = parsedPreviousYearMonth;
+
+  if (!nextIsPreviousYear) {
+    updateData.isPreviousYear = false;
+    updateData.previousYearYear = null;
+    updateData.previousYearMonth = null;
+  }
 
   if (imageFile) {
     updateData.imageData = imageFile.buffer;
@@ -296,7 +403,11 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
+      activeStatus: questionsTable.activeStatus,
       verificationStatus: questionsTable.verificationStatus,
+      isPreviousYear: questionsTable.isPreviousYear,
+      previousYearYear: questionsTable.previousYearYear,
+      previousYearMonth: questionsTable.previousYearMonth,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -310,7 +421,8 @@ router.put("/questions/:id", upload.single("image"), async (req, res): Promise<v
     .where(eq(questionsTable.id, params.data.id))
     .groupBy(
       questionsTable.id, questionsTable.chapterId, questionsTable.text,
-      questionsTable.type, questionsTable.difficulty, questionsTable.verificationStatus, questionsTable.imageName,
+      questionsTable.type, questionsTable.difficulty, questionsTable.activeStatus, questionsTable.verificationStatus,
+      questionsTable.isPreviousYear, questionsTable.previousYearYear, questionsTable.previousYearMonth, questionsTable.imageName,
       questionsTable.imageType, questionsTable.createdAt,
       chaptersTable.name, chaptersTable.subjectId, subjectsTable.name
     );
@@ -384,7 +496,11 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
+      activeStatus: questionsTable.activeStatus,
       verificationStatus: questionsTable.verificationStatus,
+      isPreviousYear: questionsTable.isPreviousYear,
+      previousYearYear: questionsTable.previousYearYear,
+      previousYearMonth: questionsTable.previousYearMonth,
       chapterName: chaptersTable.name,
       subjectName: subjectsTable.name,
       imageData: questionsTable.imageData,
@@ -411,7 +527,11 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
     text: question.text,
     type: question.type,
     difficulty: question.difficulty,
+    activeStatus: question.activeStatus,
     verificationStatus: question.verificationStatus,
+    isPreviousYear: question.isPreviousYear,
+    previousYearYear: question.previousYearYear,
+    previousYearMonth: question.previousYearMonth,
     chapterName: question.chapterName,
     subjectName: question.subjectName,
     imageData: question.imageData ? question.imageData.toString("base64") : null,

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, customType } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean, customType } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { chaptersTable } from "./chapters";
@@ -23,7 +23,26 @@ export const questionsTable = pgTable("questions", {
   text: text("text").notNull(),
   type: text("type", { enum: ["MCQ", "FILLUP"] }).notNull().default("MCQ"),
   difficulty: text("difficulty", { enum: ["EASY", "MEDIUM", "HARD", "UNLABLED"] }).notNull().default("MEDIUM"),
+  activeStatus: text("active_status", { enum: ["Active", "Inactive"] }).notNull().default("Active"),
   verificationStatus: text("verification_status", { enum: ["Verified", "Need to Verified", "Changes Needed"] }).notNull().default("Need to Verified"),
+  isPreviousYear: boolean("is_previous_year").notNull().default(false),
+  previousYearYear: integer("previous_year_year"),
+  previousYearMonth: text("previous_year_month", {
+    enum: [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ],
+  }),
   imageData: bytea("image_data"),
   imageName: text("image_name"),
   imageType: text("image_type"),

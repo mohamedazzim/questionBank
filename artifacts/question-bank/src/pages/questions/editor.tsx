@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,9 +43,234 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Eye, Trash2, Plus, Image as ImageIcon, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Save, Eye, Trash2, Plus, Image as ImageIcon, X, Check, ChevronsUpDown } from "lucide-react";
 import { LatexRenderer } from "@/components/latex-renderer";
+
+const NEW_QUESTION_SELECTION_STORAGE_KEY = "qb:last-new-question-selection";
+
+type SearchableOption = { id: number; name: string };
+
+type SearchableSelectProps = {
+  value: number;
+  onChange: (value: number) => void;
+  options: SearchableOption[];
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyText: string;
+  disabled?: boolean;
+};
+
+type TypeaheadStringSelectProps = {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyText: string;
+  disabled?: boolean;
+};
+
+const MONTH_OPTIONS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const YEAR_OPTIONS = Array.from({ length: new Date().getFullYear() - 1979 }, (_, i) => `${new Date().getFullYear() - i}`);
+
+function SearchableSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  searchPlaceholder,
+  emptyText,
+  disabled,
+}: SearchableSelectProps) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+          disabled={disabled}
+        >
+          {selected ? selected.name : placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option.id}
+                  value={`${option.name} ${option.id}`}
+                  onSelect={() => {
+                    onChange(option.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", value === option.id ? "opacity-100" : "opacity-0")} />
+                  {option.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function TypeaheadStringSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  searchPlaceholder,
+  emptyText,
+  disabled,
+}: TypeaheadStringSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = options.find((option) => option === value);
+
+  const filteredOptions = options.filter((option) => {
+    if (!query.trim()) return true;
+    return option.toLowerCase().startsWith(query.toLowerCase());
+  });
+
+  const selectFirstFiltered = () => {
+    if (filteredOptions.length === 0) return;
+    onChange(filteredOptions[0]);
+    setOpen(false);
+    setQuery("");
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (nextOpen) setQuery("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+          disabled={disabled}
+        >
+          {selected || placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={query}
+            onValueChange={setQuery}
+            onKeyDown={(event) => {
+              if ((event.key === "Enter" || event.key === "Tab") && filteredOptions.length > 0) {
+                event.preventDefault();
+                selectFirstFiltered();
+              }
+            }}
+          />
+          <CommandList>
+            {filteredOptions.length === 0 ? (
+              <CommandEmpty>{emptyText}</CommandEmpty>
+            ) : (
+              <CommandGroup>
+                {filteredOptions.map((option) => (
+                  <CommandItem
+                    key={option}
+                    value={option}
+                    onSelect={() => {
+                      onChange(option);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", value === option ? "opacity-100" : "opacity-0")} />
+                    {option}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function readSavedNewQuestionSelection(): { subjectId: number; chapterId: number } | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(NEW_QUESTION_SELECTION_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { subjectId?: unknown; chapterId?: unknown };
+    const subjectId = Number(parsed.subjectId);
+    const chapterId = Number(parsed.chapterId);
+
+    if (!Number.isFinite(subjectId) || !Number.isFinite(chapterId)) return null;
+    if (subjectId <= 0 || chapterId <= 0) return null;
+
+    return { subjectId, chapterId };
+  } catch {
+    return null;
+  }
+}
+
+function saveNewQuestionSelection(subjectId: number, chapterId: number): void {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(
+    NEW_QUESTION_SELECTION_STORAGE_KEY,
+    JSON.stringify({ subjectId, chapterId }),
+  );
+}
 
 const hasText = (value?: string | null) => Boolean(value?.trim());
 const hasImage = (image?: File, preview?: string | null, removeImage?: boolean) =>
@@ -67,7 +292,24 @@ const questionSchema = z.object({
   text: z.string(),
   type: z.enum(["MCQ", "FILLUP"]),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD", "UNLABLED"]),
+  activeStatus: z.enum(["Active", "Inactive"]),
   verificationStatus: z.enum(["Verified", "Need to Verified", "Changes Needed"]),
+  isPreviousYear: z.boolean().default(false),
+  previousYearYear: z.coerce.number().optional(),
+  previousYearMonth: z.enum([
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ]).optional(),
   image: z.instanceof(File).optional(),
   removeImage: z.boolean().optional(),
   _localPreview: z.string().optional(),
@@ -115,6 +357,24 @@ const questionSchema = z.object({
       }
     });
   }
+
+  if (data.isPreviousYear) {
+    if (!data.previousYearYear) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Year is required when Previous Year Question is checked.",
+        path: ["previousYearYear"],
+      });
+    }
+
+    if (!data.previousYearMonth) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Month is required when Previous Year Question is checked.",
+        path: ["previousYearMonth"],
+      });
+    }
+  }
 });
 
 type QuestionFormValues = z.infer<typeof questionSchema>;
@@ -130,6 +390,7 @@ export default function QuestionEditor() {
 
   const [previewMode, setPreviewMode] = useState(false);
   const [showPreviewPanel, setShowPreviewPanel] = useState(true);
+  const hasAppliedSavedSelection = useRef(false);
 
   const getDifficultyBadgeVariant = (difficulty: string): "default" | "secondary" | "destructive" | "outline" => {
     if (difficulty === "HARD") return "destructive";
@@ -157,9 +418,13 @@ export default function QuestionEditor() {
       text: "",
       type: "MCQ",
       difficulty: "MEDIUM",
+      activeStatus: "Active",
       verificationStatus: "Need to Verified",
+      isPreviousYear: false,
+      previousYearYear: undefined,
+      previousYearMonth: undefined,
       choices: [
-        { text: "", isCorrect: true },
+        { text: "", isCorrect: false },
         { text: "", isCorrect: false },
       ]
     },
@@ -172,6 +437,7 @@ export default function QuestionEditor() {
 
   const watchSubjectId = form.watch("subjectId");
   const watchType = form.watch("type");
+  const watchIsPreviousYear = form.watch("isPreviousYear");
   const watchChoices = form.watch("choices");
 
   const { data: allChaptersForEdit } = useListChapters({}, {
@@ -183,6 +449,35 @@ export default function QuestionEditor() {
   }, {
     query: { enabled: !!watchSubjectId, queryKey: ["listChapters", watchSubjectId] }
   });
+
+  useEffect(() => {
+    if (isEditing || hasAppliedSavedSelection.current) return;
+    if (!subjects || subjects.length === 0) return;
+
+    const saved = readSavedNewQuestionSelection();
+    if (!saved) {
+      hasAppliedSavedSelection.current = true;
+      return;
+    }
+
+    const subjectExists = subjects.some((s) => s.id === saved.subjectId);
+    if (subjectExists) {
+      form.setValue("subjectId", saved.subjectId, { shouldDirty: false, shouldTouch: false });
+      form.setValue("chapterId", saved.chapterId, { shouldDirty: false, shouldTouch: false });
+    }
+
+    hasAppliedSavedSelection.current = true;
+  }, [isEditing, subjects, form]);
+
+  useEffect(() => {
+    if (isEditing) return;
+    if (!watchSubjectId || !chapters) return;
+
+    const currentChapterId = form.getValues("chapterId");
+    if (currentChapterId && !chapters.some((c) => c.id === currentChapterId)) {
+      form.setValue("chapterId", 0, { shouldDirty: true, shouldTouch: true });
+    }
+  }, [isEditing, watchSubjectId, chapters, form]);
 
   // Populate form when editing
   useEffect(() => {
@@ -198,7 +493,11 @@ export default function QuestionEditor() {
         text: existingQuestion.text,
         type: existingQuestion.type,
         difficulty: existingQuestion.difficulty,
+        activeStatus: (existingQuestion as any).activeStatus || "Active",
         verificationStatus: (existingQuestion as any).verificationStatus || "Need to Verified",
+        isPreviousYear: Boolean((existingQuestion as any).isPreviousYear),
+        previousYearYear: (existingQuestion as any).previousYearYear || undefined,
+        previousYearMonth: (existingQuestion as any).previousYearMonth || undefined,
         _localPreview: existingQuestion.imageUrl || undefined,
         choices: (existingQuestion as any).choices?.map((c: any) => ({
           id: c.id,
@@ -261,7 +560,11 @@ export default function QuestionEditor() {
           text: normalizedQuestionText,
           type: data.type,
           difficulty: data.difficulty,
+          activeStatus: data.activeStatus,
           verificationStatus: data.verificationStatus,
+          isPreviousYear: data.isPreviousYear,
+          previousYearYear: data.isPreviousYear ? data.previousYearYear : undefined,
+          previousYearMonth: data.isPreviousYear ? data.previousYearMonth : undefined,
         };
         if (data.image) qData.image = data.image;
         if (data.removeImage) qData.removeImage = "true";
@@ -311,7 +614,11 @@ export default function QuestionEditor() {
           text: normalizedQuestionText,
           type: data.type,
           difficulty: data.difficulty,
+          activeStatus: data.activeStatus,
           verificationStatus: data.verificationStatus,
+          isPreviousYear: data.isPreviousYear,
+          previousYearYear: data.isPreviousYear ? data.previousYearYear : undefined,
+          previousYearMonth: data.isPreviousYear ? data.previousYearMonth : undefined,
         };
         if (data.image) qData.image = data.image;
 
@@ -328,6 +635,8 @@ export default function QuestionEditor() {
             await createChoice.mutateAsync({ data: cData });
           }
         }
+
+        saveNewQuestionSelection(data.subjectId, data.chapterId);
         
         toast({ title: "Question created successfully" });
         setLocation("/questions");
@@ -427,7 +736,13 @@ export default function QuestionEditor() {
                 <Badge variant={getDifficultyBadgeVariant(currentValues.difficulty)}>
                   {currentValues.difficulty}
                 </Badge>
+                <Badge variant={currentValues.activeStatus === "Active" ? "secondary" : "outline"}>
+                  {currentValues.activeStatus}
+                </Badge>
                 <Badge variant="outline">{currentValues.verificationStatus}</Badge>
+                {currentValues.isPreviousYear && currentValues.previousYearMonth && currentValues.previousYearYear && (
+                  <Badge variant="outline">{currentValues.previousYearMonth} {currentValues.previousYearYear} PYQ</Badge>
+                )}
               </div>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setPreviewMode(false)}>
@@ -513,21 +828,22 @@ export default function QuestionEditor() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Subject</FormLabel>
-                              <Select 
-                                onValueChange={(v) => field.onChange(Number(v))} 
-                                value={field.value ? field.value.toString() : ""}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select subject" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {subjectOptions.map(s => (
-                                    <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <SearchableSelect
+                                  value={field.value || 0}
+                                  onChange={(v) => {
+                                    field.onChange(v);
+                                    const currentChapterId = form.getValues("chapterId");
+                                    if (currentChapterId && !chapters?.some((c) => c.id === currentChapterId)) {
+                                      form.setValue("chapterId", 0, { shouldDirty: true, shouldTouch: true });
+                                    }
+                                  }}
+                                  options={subjectOptions}
+                                  placeholder="Select subject"
+                                  searchPlaceholder="Type subject name..."
+                                  emptyText="No subject found."
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -538,22 +854,17 @@ export default function QuestionEditor() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Chapter</FormLabel>
-                              <Select 
-                                onValueChange={(v) => field.onChange(Number(v))} 
-                                value={field.value ? field.value.toString() : ""}
-                                disabled={!watchSubjectId || chapterOptionsWithFallback.length === 0}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select chapter" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {chapterOptionsWithFallback.map(c => (
-                                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <SearchableSelect
+                                  value={field.value || 0}
+                                  onChange={field.onChange}
+                                  options={chapterOptionsWithFallback}
+                                  placeholder="Select chapter"
+                                  searchPlaceholder="Type chapter name..."
+                                  emptyText="No chapter found."
+                                  disabled={!watchSubjectId || chapterOptionsWithFallback.length === 0}
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -607,6 +918,27 @@ export default function QuestionEditor() {
                         />
                         <FormField
                           control={form.control}
+                          name="activeStatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Status</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Active">Active</SelectItem>
+                                  <SelectItem value="Inactive">Inactive</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
                           name="verificationStatus"
                           render={({ field }) => (
                             <FormItem>
@@ -627,6 +959,80 @@ export default function QuestionEditor() {
                             </FormItem>
                           )}
                         />
+                      </div>
+
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="isPreviousYear"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center gap-3 rounded-md border p-3">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    const nextValue = Boolean(checked);
+                                    field.onChange(nextValue);
+                                    if (!nextValue) {
+                                      form.setValue("previousYearYear", undefined, { shouldDirty: true, shouldTouch: true });
+                                      form.setValue("previousYearMonth", undefined, { shouldDirty: true, shouldTouch: true });
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <div>
+                                <FormLabel>Is Previous Year Question</FormLabel>
+                                <FormDescription className="mt-1">Enable to select exam year and month.</FormDescription>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+
+                        {watchIsPreviousYear && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="previousYearYear"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Year</FormLabel>
+                                  <FormControl>
+                                    <TypeaheadStringSelect
+                                      value={field.value ? String(field.value) : ""}
+                                      onChange={(v) => field.onChange(Number(v))}
+                                      options={YEAR_OPTIONS}
+                                      placeholder="Select year"
+                                      searchPlaceholder="Type year..."
+                                      emptyText="No matching year"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="previousYearMonth"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Month</FormLabel>
+                                  <FormControl>
+                                    <TypeaheadStringSelect
+                                      value={field.value || ""}
+                                      onChange={field.onChange}
+                                      options={MONTH_OPTIONS}
+                                      placeholder="Select month"
+                                      searchPlaceholder="Type month (e.g. j)..."
+                                      emptyText="No matching month"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <Separator />

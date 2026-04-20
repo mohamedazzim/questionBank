@@ -97,6 +97,22 @@ interface QuestionForPdf {
   choices: ChoiceForPdf[];
 }
 
+export function getImageExtensionFromMime(imageType: string | null | undefined): "png" | "jpeg" | "jpg" | "webp" {
+  const normalized = (imageType || "").toLowerCase();
+  if (normalized.includes("webp")) return "webp";
+  if (normalized.includes("jpeg")) return "jpeg";
+  if (normalized.includes("jpg")) return "jpg";
+  return "png";
+}
+
+export function getQuestionImageFileName(questionId: number, imageType: string | null | undefined): string {
+  return `question_${questionId}.${getImageExtensionFromMime(imageType)}`;
+}
+
+export function getChoiceImageFileName(questionId: number, choiceId: number, imageType: string | null | undefined): string {
+  return `question_${questionId}_choice_${choiceId}.${getImageExtensionFromMime(imageType)}`;
+}
+
 function bufferToBase64DataUri(data: Buffer | null | undefined, mimeType: string | null | undefined): string | null {
   if (!data || !mimeType) return null;
   return `data:${mimeType};base64,${data.toString("base64")}`;
@@ -216,6 +232,114 @@ function escapeHtml(text: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function escapeLatexText(text: string): string {
+  return text
+    .replace(/\\/g, "\\textbackslash{}")
+    .replace(/([{}#%&])/g, "\\$1")
+    .replace(/\$/g, "\\$")
+    .replace(/_/g, "\\_")
+    .replace(/\^/g, "\\textasciicircum{}")
+    .replace(/~/g, "\\textasciitilde{}");
+}
+
+function renderTextForTex(raw: string): string {
+  const text = raw ?? "";
+
+  if (!hasMathDelimiters(text) && looksLikeLatexExpression(text)) {
+    return `$${text.trim()}$`;
+  }
+
+  let result = "";
+  let i = 0;
+
+  while (i < text.length) {
+    const blockDollar = text.indexOf("$$", i);
+    const inlineDollar = text.indexOf("$", i);
+    const blockBracket = text.indexOf("\\[", i);
+    const inlineParen = text.indexOf("\\(", i);
+
+    const candidates = [
+      { index: blockDollar, open: "$$", close: "$$" },
+      { index: inlineDollar, open: "$", close: "$" },
+      { index: blockBracket, open: "\\[", close: "\\]" },
+      { index: inlineParen, open: "\\(", close: "\\)" },
+    ].filter((c) => c.index !== -1);
+
+    if (candidates.length === 0) {
+      result += escapeLatexText(text.slice(i));
+      break;
+    }
+
+    candidates.sort((a, b) => a.index - b.index);
+    const next = candidates[0];
+
+    result += escapeLatexText(text.slice(i, next.index));
+
+    const contentStart = next.index + next.open.length;
+    const contentEnd = text.indexOf(next.close, contentStart);
+
+    if (contentEnd === -1) {
+      result += escapeLatexText(text.slice(next.index));
+      break;
+    }
+
+    result += text.slice(next.index, contentEnd + next.close.length);
+    i = contentEnd + next.close.length;
+  }
+
+  return result;
+}
+
+export function generateTex(questions: QuestionForPdf[], title: string): string {
+  logger.info({ count: questions.length }, "Generating TEX");
+
+  const texQuestions = questions.map((q) => {
+    const lines: string[] = [];
+    lines.push(`\\question ${renderTextForTex(q.text)}`);
+
+    if (q.imageData && q.imageType) {
+      const questionImagePath = `images/${getQuestionImageFileName(q.id, q.imageType)}`;
+      lines.push(`\\textit{See image: ${escapeLatexText(questionImagePath)}}`);
+      lines.push(`\\includegraphics[width=0.5\\textwidth]{${escapeLatexText(questionImagePath)}}`);
+    }
+
+    if (q.type === "MCQ" && q.choices.length > 0) {
+      lines.push("\\begin{choices}");
+      for (const choice of q.choices) {
+        const choiceCommand = choice.isCorrect ? "\\CorrectChoice" : "\\choice";
+        lines.push(`${choiceCommand} ${renderTextForTex(choice.text)}`);
+        if (choice.imageData && choice.imageType) {
+          const choiceImagePath = `images/${getChoiceImageFileName(q.id, choice.id, choice.imageType)}`;
+          lines.push(`\\textit{See image: ${escapeLatexText(choiceImagePath)}}`);
+          lines.push(`\\includegraphics[width=0.35\\textwidth]{${escapeLatexText(choiceImagePath)}}`);
+        }
+      }
+      lines.push("\\end{choices}");
+    }
+
+    return lines.join("\n");
+  }).join("\n\n");
+
+  return [
+    "\\documentclass[12pt]{exam}",
+    "\\usepackage{amsmath}",
+    "\\usepackage{amssymb}",
+    "\\usepackage{graphicx}",
+    "\\usepackage{enumitem}",
+    "",
+    "\\begin{document}",
+    `\\title{${escapeLatexText(title || "Questions")}}`,
+    "\\date{}",
+    "\\maketitle",
+    "",
+    "\\begin{questions}",
+    texQuestions,
+    "\\end{questions}",
+    "\\end{document}",
+    "",
+  ].join("\n");
 }
 
 export async function generatePdf(questions: QuestionForPdf[], title: string): Promise<Buffer> {

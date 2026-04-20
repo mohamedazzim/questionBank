@@ -5,7 +5,9 @@
  * Question Bank API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateQuestionBodyActiveStatus } from "./updateQuestionBodyActiveStatus";
 import type { UpdateQuestionBodyDifficulty } from "./updateQuestionBodyDifficulty";
+import type { UpdateQuestionBodyPreviousYearMonth } from "./updateQuestionBodyPreviousYearMonth";
 import type { UpdateQuestionBodyRemoveImage } from "./updateQuestionBodyRemoveImage";
 import type { UpdateQuestionBodyType } from "./updateQuestionBodyType";
 import type { UpdateQuestionBodyVerificationStatus } from "./updateQuestionBodyVerificationStatus";
@@ -15,7 +17,11 @@ export interface UpdateQuestionBody {
   text?: string;
   type?: UpdateQuestionBodyType;
   difficulty?: UpdateQuestionBodyDifficulty;
+  activeStatus?: UpdateQuestionBodyActiveStatus;
   verificationStatus?: UpdateQuestionBodyVerificationStatus;
+  isPreviousYear?: boolean;
+  previousYearYear?: number;
+  previousYearMonth?: UpdateQuestionBodyPreviousYearMonth;
   image?: Blob;
   removeImage?: UpdateQuestionBodyRemoveImage;
 }

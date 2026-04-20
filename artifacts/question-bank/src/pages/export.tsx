@@ -26,6 +26,7 @@ export default function Export() {
   const { toast } = useToast();
   
   const [exportType, setExportType] = useState<"subject" | "chapter" | "selected">("subject");
+  const [exportFormat, setExportFormat] = useState<"pdf" | "tex">("pdf");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedChapterId, setSelectedChapterId] = useState<string>("");
   
@@ -119,35 +120,37 @@ export default function Export() {
     try {
       setIsExporting(true);
       let res: Response;
-      let filename = 'export.pdf';
+      const extension = exportFormat === "pdf" ? "pdf" : "zip";
+      const formatLabel = exportFormat.toUpperCase();
+      let filename = `export.${extension}`;
 
       if (exportType === "subject") {
         if (!selectedSubjectId) {
           toast({ title: "Please select a subject", variant: "destructive" });
           return;
         }
-        res = await fetch(`/api/export/pdf/subject/${selectedSubjectId}`);
+        res = await fetch(`/api/export/${exportFormat}/subject/${selectedSubjectId}`);
         const sub = subjects?.find(s => s.id === Number(selectedSubjectId));
-        if (sub) filename = `${sub.name.replace(/\s+/g, '_')}_Questions.pdf`;
+        if (sub) filename = `${sub.name.replace(/\s+/g, '_')}_Questions.${extension}`;
       } else if (exportType === "chapter") {
         if (!selectedChapterId) {
           toast({ title: "Please select a chapter", variant: "destructive" });
           return;
         }
-        res = await fetch(`/api/export/pdf/chapter/${selectedChapterId}`);
+        res = await fetch(`/api/export/${exportFormat}/chapter/${selectedChapterId}`);
         const ch = exportChapters?.find(c => c.id === Number(selectedChapterId));
-        if (ch) filename = `${ch.name.replace(/\s+/g, '_')}_Questions.pdf`;
+        if (ch) filename = `${ch.name.replace(/\s+/g, '_')}_Questions.${extension}`;
       } else {
         if (selectedQuestionIds.length === 0) {
           toast({ title: "Please select at least one question", variant: "destructive" });
           return;
         }
-        res = await fetch(`/api/export/pdf/selected`, {
+        res = await fetch(`/api/export/${exportFormat}/selected`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ questionIds: selectedQuestionIds, title: "Custom Question Bank" })
         });
-        filename = `Custom_Selection_${selectedQuestionIds.length}_Questions.pdf`;
+        filename = `Custom_Selection_${selectedQuestionIds.length}_Questions.${extension}`;
       }
 
       if (!res.ok) {
@@ -164,11 +167,16 @@ export default function Export() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      const localExportDir = res.headers.get("x-local-export-dir");
       
-      toast({ title: "Export completed successfully" });
+      toast({
+        title: `Export completed successfully (${formatLabel})`,
+        description: localExportDir ? `Also saved in project folder: ${localExportDir}` : undefined,
+      });
     } catch (error) {
       console.error(error);
-      toast({ title: "Failed to generate PDF", variant: "destructive" });
+      toast({ title: `Failed to generate ${exportFormat.toUpperCase()}`, variant: "destructive" });
     } finally {
       setIsExporting(false);
     }
@@ -177,8 +185,8 @@ export default function Export() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground">Export PDF</h1>
-        <p className="text-muted-foreground mt-1">Generate beautifully formatted PDF documents of your question banks.</p>
+        <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground">Export Questions</h1>
+        <p className="text-muted-foreground mt-1">Generate beautifully formatted PDF or TEX documents of your question banks.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -221,7 +229,20 @@ export default function Export() {
           <CardTitle>Configuration</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {!isHealthLoading && !exportHealth?.canGeneratePdf && (
+          <div className="space-y-2 max-w-xs">
+            <label className="text-sm font-medium">Export Format</label>
+            <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as "pdf" | "tex")}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="tex">TEX</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {exportFormat === "pdf" && !isHealthLoading && !exportHealth?.canGeneratePdf && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>PDF runtime is not ready</AlertTitle>
@@ -402,13 +423,13 @@ export default function Export() {
         <Button
           size="lg"
           onClick={handleExport}
-          disabled={isExporting || isHealthLoading || !exportHealth?.canGeneratePdf}
+          disabled={isExporting || (exportFormat === "pdf" && (isHealthLoading || !exportHealth?.canGeneratePdf))}
           className="w-full sm:w-auto"
         >
           {isExporting ? (
-            <span className="flex items-center">Generating PDF...</span>
+            <span className="flex items-center">Generating {exportFormat.toUpperCase()}...</span>
           ) : (
-            <span className="flex items-center"><FileText className="mr-2 h-5 w-5" /> Generate PDF</span>
+            <span className="flex items-center"><FileText className="mr-2 h-5 w-5" /> Generate {exportFormat.toUpperCase()}</span>
           )}
         </Button>
       </div>
