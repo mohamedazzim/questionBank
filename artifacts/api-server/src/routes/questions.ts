@@ -9,7 +9,12 @@ import {
   GetQuestionImageParams,
   ListQuestionsQueryParams,
 } from "@workspace/api-zod";
-import { upload } from "../lib/multer";
+import { upload, bulkUpload } from "../lib/multer";
+import { processBulkIngestion } from "../lib/bulkIngestionProcessor";
+import { writeFile } from "fs/promises";
+import path from "path";
+import { logger } from "../lib/logger";
+import { mapFromDB } from "../lib/canonicalMapper";
 
 const router: IRouter = Router();
 const VALID_QUESTION_TYPES = ["MCQ", "FILLUP"];
@@ -29,13 +34,28 @@ const VALID_PREVIOUS_YEAR_MONTHS = [
   "October",
   "November",
   "December",
-];
+] as const;
 const questionUpload = upload.fields([
   { name: "image", maxCount: 1 },
   { name: "solutionImage", maxCount: 1 },
 ]);
 
 const normalizeText = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+
+const normalizePreviousYearParts = (value: string | null): { year: number | null; month: typeof VALID_PREVIOUS_YEAR_MONTHS[number] | null } => {
+  if (!value) return { year: null, month: null };
+
+  const yearMatch = value.match(/\b(19|20)\d{2}\b/);
+  const monthMatch = value.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/i);
+  const normalizedMonth: typeof VALID_PREVIOUS_YEAR_MONTHS[number] | null = monthMatch
+    ? VALID_PREVIOUS_YEAR_MONTHS.find((month) => month.toLowerCase() === monthMatch[1].toLowerCase()) ?? null
+    : null;
+
+  return {
+    year: yearMatch ? Number.parseInt(yearMatch[0], 10) : null,
+    month: normalizedMonth,
+  };
+};
 
 const parseBooleanInput = (value: unknown): boolean | undefined => {
   if (value === true || value === false) return value;
@@ -87,6 +107,7 @@ router.get("/questions", async (req, res): Promise<void> => {
       previousYearDateText: questionsTable.previousYearDateText,
       previousYearYear: questionsTable.previousYearYear,
       previousYearMonth: questionsTable.previousYearMonth,
+      answerText: questionsTable.answerText,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -106,7 +127,7 @@ router.get("/questions", async (req, res): Promise<void> => {
       questionsTable.id, questionsTable.chapterId, questionsTable.text,
       questionsTable.type, questionsTable.difficulty, questionsTable.activeStatus, questionsTable.verificationStatus,
       questionsTable.isPreviousYear, questionsTable.previousYearDateText, questionsTable.previousYearYear, questionsTable.previousYearMonth, questionsTable.imageName,
-      questionsTable.imageType, questionsTable.solutionText, questionsTable.solutionImageName,
+      questionsTable.imageType, questionsTable.answerText, questionsTable.solutionText, questionsTable.solutionImageName,
       questionsTable.solutionImageType, questionsTable.createdAt,
       chaptersTable.name, chaptersTable.subjectId, subjectsTable.name
     )
@@ -130,6 +151,7 @@ router.post("/questions", questionUpload, async (req, res): Promise<void> => {
   const solutionImageFile = files?.solutionImage?.[0] || null;
   const chapterId = parseInt(body.chapterId, 10);
   const normalizedText = normalizeText(body.text);
+  const normalizedAnswerText = normalizeText(body.answerText) || null;
   const normalizedSolutionText = normalizeText(body.solutionText) || null;
 
   if (!body.type || !body.difficulty || isNaN(chapterId)) {
@@ -142,9 +164,10 @@ router.post("/questions", questionUpload, async (req, res): Promise<void> => {
   const parsedIsPreviousYear = parseBooleanInput(body.isPreviousYear);
   const isPreviousYear = parsedIsPreviousYear ?? false;
   const previousYearDateText = normalizeText(body.previousYearDateText) || null;
+  const previousYearParts = normalizePreviousYearParts(previousYearDateText);
 
-  if (!normalizedText && !imageFile) {
-    res.status(400).json({ error: "Question must include text or an image" });
+  if (!normalizedText) {
+    res.status(400).json({ error: "Question text is required" });
     return;
   }
 
@@ -176,8 +199,9 @@ router.post("/questions", questionUpload, async (req, res): Promise<void> => {
       verificationStatus,
       isPreviousYear,
       previousYearDateText: isPreviousYear ? previousYearDateText : null,
-      previousYearYear: null,
-      previousYearMonth: null,
+      previousYearYear: isPreviousYear ? previousYearParts.year : null,
+      previousYearMonth: isPreviousYear ? previousYearParts.month : null,
+      answerText: normalizedAnswerText,
       imageData: imageFile ? imageFile.buffer : null,
       imageName: imageFile ? imageFile.originalname : null,
       imageType: imageFile ? imageFile.mimetype : null,
@@ -227,6 +251,7 @@ router.get("/questions/:id", async (req, res): Promise<void> => {
       previousYearDateText: questionsTable.previousYearDateText,
       previousYearYear: questionsTable.previousYearYear,
       previousYearMonth: questionsTable.previousYearMonth,
+      answerText: questionsTable.answerText,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -289,6 +314,7 @@ router.put("/questions/:id", questionUpload, async (req, res): Promise<void> => 
       previousYearDateText: questionsTable.previousYearDateText,
       previousYearYear: questionsTable.previousYearYear,
       previousYearMonth: questionsTable.previousYearMonth,
+      answerText: questionsTable.answerText,
     })
     .from(questionsTable)
     .where(eq(questionsTable.id, params.data.id));
@@ -332,6 +358,7 @@ router.put("/questions/:id", questionUpload, async (req, res): Promise<void> => 
   const nextPreviousYearDateText = parsedPreviousYearDateText !== undefined
     ? parsedPreviousYearDateText
     : existingQuestion.previousYearDateText;
+  const nextPreviousYearParts = normalizePreviousYearParts(nextPreviousYearDateText);
 
   if (nextIsPreviousYear && !nextPreviousYearDateText) {
     res.status(400).json({ error: "When isPreviousYear is true, previousYearDateText is required." });
@@ -353,9 +380,8 @@ router.put("/questions/:id", questionUpload, async (req, res): Promise<void> => 
   }
 
   const nextText = body.text != null ? normalizeText(body.text) : normalizeText(existingQuestion.text);
-  const nextHasImage = imageFile ? true : removeImage ? false : Boolean(existingQuestion.imageName);
-  if (!nextText && !nextHasImage) {
-    res.status(400).json({ error: "Question must include text or an image" });
+  if (!nextText) {
+    res.status(400).json({ error: "Question text is required" });
     return;
   }
 
@@ -364,6 +390,10 @@ router.put("/questions/:id", questionUpload, async (req, res): Promise<void> => 
   if (body.solutionText != null) {
     const normalizedSolutionText = normalizeText(body.solutionText);
     updateData.solutionText = normalizedSolutionText || null;
+  }
+  if (body.answerText != null) {
+    const normalizedAnswerText = normalizeText(body.answerText);
+    updateData.answerText = normalizedAnswerText || null;
   }
   if (body.type) updateData.type = body.type;
   if (body.difficulty) updateData.difficulty = body.difficulty;
@@ -374,8 +404,8 @@ router.put("/questions/:id", questionUpload, async (req, res): Promise<void> => 
   if (parsedPreviousYearDateText !== undefined) updateData.previousYearDateText = parsedPreviousYearDateText;
 
   if (nextIsPreviousYear) {
-    updateData.previousYearYear = null;
-    updateData.previousYearMonth = null;
+    updateData.previousYearYear = nextPreviousYearParts.year;
+    updateData.previousYearMonth = nextPreviousYearParts.month;
   }
 
   if (!nextIsPreviousYear) {
@@ -437,6 +467,7 @@ router.put("/questions/:id", questionUpload, async (req, res): Promise<void> => 
       previousYearDateText: questionsTable.previousYearDateText,
       previousYearYear: questionsTable.previousYearYear,
       previousYearMonth: questionsTable.previousYearMonth,
+      answerText: questionsTable.answerText,
       imageUrl: sql<string | null>`case when ${questionsTable.imageName} is not null then '/api/questions/' || ${questionsTable.id} || '/image' else null end`,
       imageName: questionsTable.imageName,
       imageType: questionsTable.imageType,
@@ -456,7 +487,7 @@ router.put("/questions/:id", questionUpload, async (req, res): Promise<void> => 
       questionsTable.id, questionsTable.chapterId, questionsTable.text,
       questionsTable.type, questionsTable.difficulty, questionsTable.activeStatus, questionsTable.verificationStatus,
       questionsTable.isPreviousYear, questionsTable.previousYearDateText, questionsTable.previousYearYear, questionsTable.previousYearMonth, questionsTable.imageName,
-      questionsTable.imageType, questionsTable.solutionText, questionsTable.solutionImageName,
+      questionsTable.imageType, questionsTable.answerText, questionsTable.solutionText, questionsTable.solutionImageName,
       questionsTable.solutionImageType, questionsTable.createdAt,
       chaptersTable.name, chaptersTable.subjectId, subjectsTable.name
     );
@@ -474,6 +505,83 @@ router.put("/questions/:id", questionUpload, async (req, res): Promise<void> => 
   });
 });
 
+router.delete("/questions/clear-all", async (req, res): Promise<void> => {
+  if (process.env.NODE_ENV !== "development") {
+    res.status(403).json({ success: false, message: "Bulk delete is disabled in production", error: "Bulk delete is disabled in production" });
+    return;
+  }
+
+  const confirm = req.body?.confirm === true;
+
+  if (!confirm) {
+    res.status(400).json({ success: false, message: "Confirmation required", error: "confirm must be true" });
+    return;
+  }
+
+  const deletedCount = await db.transaction(async (tx) => {
+    await tx.delete(choicesTable);
+    const deleted = await tx.delete(questionsTable).returning({ id: questionsTable.id });
+    return deleted.length;
+  });
+
+  logger.info({ deletedCount, timestamp: new Date().toISOString() }, "All DB questions cleared");
+
+  res.json({
+    success: true,
+    message: "All questions cleared from database successfully",
+    deletedCount,
+  });
+});
+
+router.delete("/questions/chapter/:chapterId/clear", async (req, res): Promise<void> => {
+  if (process.env.NODE_ENV !== "development") {
+    res.status(403).json({ success: false, message: "Bulk delete is disabled in production", error: "Bulk delete is disabled in production" });
+    return;
+  }
+
+  const raw = Array.isArray(req.params.chapterId) ? req.params.chapterId[0] : req.params.chapterId;
+  const chapterId = parseInt(raw, 10);
+  const confirm = req.body?.confirm === true;
+
+  if (Number.isNaN(chapterId)) {
+    res.status(400).json({ success: false, message: "Invalid chapterId", error: "Invalid chapterId" });
+    return;
+  }
+
+  if (!confirm) {
+    res.status(400).json({ success: false, message: "Confirmation required", error: "confirm must be true" });
+    return;
+  }
+
+  const [chapter] = await db.select({ id: chaptersTable.id }).from(chaptersTable).where(eq(chaptersTable.id, chapterId));
+  if (!chapter) {
+    res.status(404).json({ success: false, message: "Chapter not found", error: "Chapter not found" });
+    return;
+  }
+
+  const deletedCount = await db.transaction(async (tx) => {
+    const chapterQuestions = await tx
+      .select({ id: questionsTable.id })
+      .from(questionsTable)
+      .where(eq(questionsTable.chapterId, chapterId));
+
+    for (const question of chapterQuestions) {
+      await tx.delete(choicesTable).where(eq(choicesTable.questionId, question.id));
+    }
+
+    const deleted = await tx.delete(questionsTable).where(eq(questionsTable.chapterId, chapterId)).returning({ id: questionsTable.id });
+    return deleted.length;
+  });
+
+  logger.info({ chapterId, deletedCount, timestamp: new Date().toISOString() }, "Chapter questions cleared");
+
+  res.json({
+    success: true,
+    message: "All questions deleted successfully",
+    deletedCount,
+  });
+});
+
 router.delete("/questions/:id", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = DeleteQuestionParams.safeParse({ id: parseInt(raw, 10) });
@@ -482,17 +590,29 @@ router.delete("/questions/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [question] = await db
-    .delete(questionsTable)
-    .where(eq(questionsTable.id, params.data.id))
-    .returning();
+  try {
+    const question = await db.transaction(async (tx) => {
+      // Manually delete choices first to prevent foreign key constraint violations
+      // in case the database doesn't have ON DELETE CASCADE configured natively
+      await tx.delete(choicesTable).where(eq(choicesTable.questionId, params.data.id));
+      
+      const [deletedQuestion] = await tx
+        .delete(questionsTable)
+        .where(eq(questionsTable.id, params.data.id))
+        .returning();
+        
+      return deletedQuestion;
+    });
 
-  if (!question) {
-    res.status(404).json({ error: "Question not found" });
-    return;
+    if (!question) {
+      res.status(404).json({ error: "Question not found" });
+      return;
+    }
+
+    res.json(question);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete question", details: String(error) });
   }
-
-  res.sendStatus(204);
 });
 
 router.get("/questions/:id/image", async (req, res): Promise<void> => {
@@ -552,6 +672,8 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
   const [question] = await db
     .select({
       id: questionsTable.id,
+      chapterId: questionsTable.chapterId,
+      subjectId: chaptersTable.subjectId,
       text: questionsTable.text,
       type: questionsTable.type,
       difficulty: questionsTable.difficulty,
@@ -561,6 +683,7 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
       previousYearDateText: questionsTable.previousYearDateText,
       previousYearYear: questionsTable.previousYearYear,
       previousYearMonth: questionsTable.previousYearMonth,
+      answerText: questionsTable.answerText,
       chapterName: chaptersTable.name,
       subjectName: subjectsTable.name,
       imageData: questionsTable.imageData,
@@ -585,8 +708,14 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
     .where(eq(choicesTable.questionId, params.data.id))
     .orderBy(choicesTable.id);
 
+  const canonicalQuestion = mapFromDB(question, choices.map((choice) => ({ text: choice.text, isCorrect: choice.isCorrect })));
+
   res.json({
     id: question.id,
+    canonicalQuestion,
+    questionText: canonicalQuestion.questionText,
+    options: canonicalQuestion.options,
+    images: canonicalQuestion.images,
     text: question.text,
     type: question.type,
     difficulty: question.difficulty,
@@ -596,6 +725,7 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
     previousYearDateText: question.previousYearDateText,
     previousYearYear: question.previousYearYear,
     previousYearMonth: question.previousYearMonth,
+    answerText: question.answerText,
     chapterName: question.chapterName,
     subjectName: question.subjectName,
     imageData: question.imageData ? question.imageData.toString("base64") : null,
@@ -611,6 +741,149 @@ router.get("/questions/:id/preview", async (req, res): Promise<void> => {
       imageType: c.imageType,
     })),
   });
+});
+
+/**
+ * Bulk ingestion endpoint
+ * POST /questions/bulk/upload
+ * 
+ * Accepts ZIP/RAR archive containing LaTeX source and images
+ * Returns detailed ingestion results and error report
+ */
+router.post("/questions/bulk/upload", bulkUpload.single("zipFile"), async (req, res): Promise<void> => {
+  if (!req.file) {
+    res.status(400).json({
+      success: false,
+      message: "No archive uploaded",
+      error: "No archive uploaded",
+    });
+    return;
+  }
+
+  const chapterId = parseInt(req.body.chapterId, 10);
+
+  if (isNaN(chapterId)) {
+    res.status(400).json({
+      success: false,
+      message: "Invalid or missing chapterId",
+      error: "Invalid or missing chapterId",
+    });
+    return;
+  }
+
+  // Verify chapter exists
+  const [chapter] = await db.select().from(chaptersTable).where(eq(chaptersTable.id, chapterId));
+  if (!chapter) {
+    res.status(400).json({
+      success: false,
+      message: "Chapter not found",
+      error: "Chapter not found",
+    });
+    return;
+  }
+
+  try {
+    logger.info(
+      {
+        chapterId,
+        fileName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+      },
+      "Bulk upload received",
+    );
+
+    // Write archive file to temporary location
+    const tmpDir = path.join(process.cwd(), "uploads", "tmp");
+    await (await import("fs/promises")).mkdir(tmpDir, { recursive: true });
+    const ext = path.extname(req.file.originalname || "").toLowerCase();
+    const safeExt = ext === ".rar" ? ".rar" : ".zip";
+    const tmpPath = path.join(tmpDir, `bulk-upload-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
+    await writeFile(tmpPath, req.file.buffer);
+
+    logger.info({ tmpPath, chapterId }, "Bulk ingestion extraction start");
+
+    // Process bulk ingestion
+    const result = await processBulkIngestion({
+      archiveFilePath: tmpPath,
+      chapterId,
+      defaultDifficulty: "UNLABLED",
+    });
+
+    logger.info(
+      {
+        chapterId,
+        success: result.success,
+        summary: result.summary,
+        stats: result.stats,
+      },
+      "Bulk ingestion completed",
+    );
+
+    const failureDetails = result.errors.map((e) => `${e.message} ${e.detail || ""}`.trim()).join(" | ");
+
+    if (!result.success && failureDetails.includes("RAR extraction requires WinRAR or unrar installed")) {
+      res.status(400).json({
+        success: false,
+        message: "RAR extraction failed",
+        reason: "unrar not installed",
+        error: "RAR extraction requires WinRAR or unrar installed",
+      });
+      return;
+    }
+
+    if (!result.success && failureDetails.includes("Invalid or corrupted RAR file")) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid or corrupted RAR file",
+        reason: "corrupted file",
+        error: "Invalid or corrupted RAR file",
+      });
+      return;
+    }
+
+    if (!result.success && failureDetails.includes("RAR contains no files")) {
+      res.status(400).json({
+        success: false,
+        message: "RAR contains no files",
+        reason: "no files extracted",
+        error: "RAR contains no files",
+      });
+      return;
+    }
+
+    if (!result.success && failureDetails.includes("RAR extraction failed: archive is corrupt or unsupported")) {
+      res.status(400).json({
+        success: false,
+        message: "RAR extraction failed",
+        reason: "archive is corrupt or unsupported",
+        error: "RAR extraction failed: archive is corrupt or unsupported",
+      });
+      return;
+    }
+
+    // Clean up temp ZIP file
+    try {
+      await (await import("fs/promises")).rm(tmpPath, { force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+
+    res.status(result.success ? 201 : result.summary.inserted > 0 ? 200 : 400).json({
+      ...result,
+      success: result.success,
+      message: result.success ? "Bulk upload completed successfully" : result.summary.inserted > 0 ? "Bulk upload completed with issues" : "Bulk upload failed",
+      data: result,
+    });
+  } catch (err) {
+    logger.error({ err, chapterId, fileName: req.file.originalname }, "Bulk upload failed");
+    res.status(500).json({
+      success: false,
+      message: "Failed to process bulk ingestion",
+      error: "Failed to process bulk ingestion",
+      detail: String(err),
+    });
+  }
 });
 
 export default router;

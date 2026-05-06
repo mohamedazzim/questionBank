@@ -1,0 +1,1 @@
+import * as fs from 'fs'; let content = fs.readFileSync('src/lib/latexParser.ts', 'utf8'); content = content.replace(/private parseFallbackQuestions\([\s\S]*?\n  private finalizeQuestion\(/, 'private finalizeQuestion('); fs.writeFileSync('src/lib/latexParser.ts', content);

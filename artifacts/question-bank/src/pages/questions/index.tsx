@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit2, Trash2, Image as ImageIcon } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, Image as ImageIcon, DatabaseZap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LatexRenderer } from "@/components/latex-renderer";
@@ -56,6 +56,9 @@ export default function Questions() {
   const [verificationStatus, setVerificationStatus] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [isClearingAll, setIsClearingAll] = useState(false);
+  const [isClearPending, setIsClearPending] = useState(false);
+  const [clearConfirmText, setClearConfirmText] = useState("");
 
   const getDifficultyBadgeVariant = (difficultyValue: string): "default" | "secondary" | "destructive" | "outline" => {
     if (difficultyValue === "HARD") return "destructive";
@@ -97,17 +100,79 @@ export default function Questions() {
   const { data: questionsData, isLoading } = useListQuestions(queryParams);
   const deleteQuestion = useDeleteQuestion();
 
+  const getErrorMessage = (err: unknown): string => {
+    if (err && typeof err === "object") {
+      const data = (err as { data?: unknown }).data;
+      if (data && typeof data === "object") {
+        const message = (data as { message?: unknown; error?: unknown }).message ?? (data as { error?: unknown }).error;
+        if (typeof message === "string") return message;
+      }
+
+      const message = (err as { message?: unknown }).message;
+      if (typeof message === "string") return message;
+    }
+
+    return "Please try again.";
+  };
+
+  const refreshQuestionList = async () => {
+    await queryClient.invalidateQueries({ queryKey: getListQuestionsQueryKey() });
+  };
+
+  const confirmClearAll = async () => {
+    if (clearConfirmText !== "DELETE DB") {
+      toast({ title: "Please type DELETE DB to confirm", variant: "destructive" });
+      return;
+    }
+
+    setIsClearPending(true);
+    try {
+      const response = await fetch("/api/questions/clear-all", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: true }),
+      });
+      const payload = await response.json().catch(() => null) as { message?: string; error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.message || payload?.error || `HTTP ${response.status}`);
+      }
+
+      await refreshQuestionList();
+      setPage(1);
+      setIsClearingAll(false);
+      setClearConfirmText("");
+      toast({ title: "Success", description: payload?.message || "All questions cleared from database successfully" });
+    } catch (err) {
+      toast({
+        title: "Error clearing database",
+        description: getErrorMessage(err),
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearPending(false);
+    }
+  };
+
   const confirmDelete = () => {
     if (!deletingId) return;
+    const deletedQuestionId = deletingId;
     deleteQuestion.mutate(
-      { id: deletingId },
+      { id: deletedQuestionId },
       {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListQuestionsQueryKey() });
+        onSuccess: async () => {
+          await refreshQuestionList();
+          if (questionsData?.questions.length === 1 && page > 1) {
+            setPage((currentPage) => Math.max(1, currentPage - 1));
+          }
           setDeletingId(null);
-          toast({ title: "Question deleted successfully" });
+          toast({ title: "Question deleted successfully", description: `Question #${deletedQuestionId} was removed.` });
         },
-        onError: () => toast({ title: "Error deleting question", variant: "destructive" })
+        onError: (err: unknown) => toast({
+          title: "Error deleting question",
+          description: getErrorMessage(err),
+          variant: "destructive",
+        })
       }
     );
   };
@@ -119,12 +184,18 @@ export default function Questions() {
           <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground">Questions</h1>
           <p className="text-muted-foreground mt-1">Manage the master question repository.</p>
         </div>
-        <Link href="/questions/new">
-          <Button className="shrink-0">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Question
+        <div className="flex gap-2">
+          <Button variant="outline" className="text-destructive" onClick={() => setIsClearingAll(true)}>
+            <DatabaseZap className="mr-2 h-4 w-4" />
+            Clear DB
           </Button>
-        </Link>
+          <Link href="/questions/new">
+            <Button className="shrink-0">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Question
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
@@ -315,8 +386,50 @@ export default function Questions() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                confirmDelete();
+              }}
+              disabled={deleteQuestion.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteQuestion.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isClearingAll} onOpenChange={setIsClearingAll}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete ALL questions in the database, including all choices and related data.
+            </AlertDialogDescription>
+            <div className="mt-4">
+              <label htmlFor="confirm-clear" className="block text-sm font-medium mb-1">
+                Type <span className="font-bold">DELETE DB</span> to confirm
+              </label>
+              <Input
+                id="confirm-clear"
+                value={clearConfirmText}
+                onChange={(e) => setClearConfirmText(e.target.value)}
+                placeholder="DELETE DB"
+              />
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setClearConfirmText("")}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                confirmClearAll();
+              }} 
+              disabled={clearConfirmText !== "DELETE DB" || isClearPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearPending ? "Clearing..." : "Delete All Data"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

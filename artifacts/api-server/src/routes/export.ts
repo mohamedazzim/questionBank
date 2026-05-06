@@ -11,6 +11,7 @@ import {
   ExportSubjectPdfParams,
   ExportSelectedPdfBody,
 } from "@workspace/api-zod";
+import { mapFromDB } from "../lib/canonicalMapper";
 
 const router: IRouter = Router();
 const projectRoot = path.resolve(process.cwd(), "../..");
@@ -133,6 +134,11 @@ async function fetchQuestionsWithChoices(questionIds: number[]) {
       difficulty: questionsTable.difficulty,
       chapterName: chaptersTable.name,
       subjectName: subjectsTable.name,
+      previousYearDateText: questionsTable.previousYearDateText,
+      previousYearYear: questionsTable.previousYearYear,
+      previousYearMonth: questionsTable.previousYearMonth,
+      answerText: questionsTable.answerText,
+      solutionText: questionsTable.solutionText,
       imageData: questionsTable.imageData,
       imageType: questionsTable.imageType,
     })
@@ -150,6 +156,7 @@ async function fetchQuestionsWithChoices(questionIds: number[]) {
 
   return questions.map((q) => ({
     id: q.id,
+    questionText: mapFromDB(q, choices.filter((c) => c.questionId === q.id).map((c) => ({ text: c.text, isCorrect: c.isCorrect }))).questionText,
     text: q.text,
     type: q.type,
     difficulty: q.difficulty,
@@ -157,6 +164,12 @@ async function fetchQuestionsWithChoices(questionIds: number[]) {
     subjectName: q.subjectName,
     imageData: q.imageData ?? null,
     imageType: q.imageType ?? null,
+    options: mapFromDB(q, choices.filter((c) => c.questionId === q.id).map((c) => ({ text: c.text, isCorrect: c.isCorrect }))).options,
+    answerText: q.answerText ?? null,
+    previousYearDateText: q.previousYearDateText ?? null,
+    previousYearYear: q.previousYearYear ?? null,
+    previousYearMonth: q.previousYearMonth ?? null,
+    solutionText: q.solutionText ?? null,
     choices: choices
       .filter((c) => c.questionId === q.id)
       .map((c) => ({

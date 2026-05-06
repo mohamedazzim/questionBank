@@ -160,6 +160,46 @@ const hasText = (value?: string | null) => Boolean(value?.trim());
 const hasImage = (image?: File, preview?: string | null, removeImage?: boolean) =>
   Boolean(image) || (Boolean(preview) && !removeImage);
 
+function splitLeakedQuestionSections(
+  text: string,
+  answerText?: string | null,
+  solutionText?: string | null,
+  previousYearDateText?: string | null,
+): {
+  text: string;
+  answerText: string;
+  solutionText: string;
+  previousYearDateText: string;
+} {
+  const normalized = (text || "")
+    .replace(/\\textbf\s*\{\s*(Sol(?:ution)?\s*:)\s*\}/gi, "$1")
+    .replace(/\\textit\s*\{\s*(Sol(?:ution)?\s*:)\s*\}/gi, "$1")
+    .replace(/\\emph\s*\{\s*(Sol(?:ution)?\s*:)\s*\}/gi, "$1");
+  const firstMetadata = normalized.match(/(?:^|\n)\s*(?:Year|Ans(?:wer)?|Sol(?:ution)?)\s*:/i);
+
+  if (!firstMetadata || firstMetadata.index === undefined) {
+    return {
+      text,
+      answerText: answerText || "",
+      solutionText: solutionText || "",
+      previousYearDateText: previousYearDateText || "",
+    };
+  }
+
+  const cleanText = normalized.slice(0, firstMetadata.index).trim();
+  const metadataText = normalized.slice(firstMetadata.index);
+  const yearMatch = metadataText.match(/(?:^|\n)\s*Year\s*:\s*([^\n]+)/i);
+  const answerMatch = metadataText.match(/(?:^|\n)\s*Ans(?:wer)?\s*:\s*([^\n]+)/i);
+  const solutionMatch = metadataText.match(/(?:^|\n)\s*Sol(?:ution)?\s*:\s*([\s\S]*)$/i);
+
+  return {
+    text: cleanText,
+    answerText: answerText || answerMatch?.[1]?.trim() || "",
+    solutionText: solutionText || solutionMatch?.[1]?.trim() || "",
+    previousYearDateText: previousYearDateText || yearMatch?.[1]?.trim() || "",
+  };
+}
+
 const choiceSchema = z.object({
   id: z.number().optional(),
   text: z.string(),
@@ -183,16 +223,17 @@ const questionSchema = z.object({
   image: z.instanceof(File).optional(),
   removeImage: z.boolean().optional(),
   _localPreview: z.string().optional(),
+  answerText: z.string().optional(),
   solutionText: z.string().optional(),
   solutionImage: z.instanceof(File).optional(),
   removeSolutionImage: z.boolean().optional(),
   _solutionLocalPreview: z.string().optional(),
   choices: z.array(choiceSchema).optional(),
 }).superRefine((data, ctx) => {
-  if (!hasText(data.text) && !hasImage(data.image, data._localPreview, data.removeImage)) {
+  if (!hasText(data.text)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Provide question text or upload a question image.",
+      message: "Question text is required.",
       path: ["text"],
     });
   }
@@ -275,6 +316,7 @@ export default function QuestionEditor() {
       subjectId: 0,
       chapterId: 0,
       text: "",
+      answerText: "",
       solutionText: "",
       type: "MCQ",
       difficulty: "MEDIUM",
@@ -345,24 +387,30 @@ export default function QuestionEditor() {
         existingQuestion.subjectId ??
         allChaptersForEdit?.find((c) => c.id === existingQuestion.chapterId)?.subjectId ??
         0;
+      const normalizedSections = splitLeakedQuestionSections(
+        existingQuestion.text,
+        (existingQuestion as any).answerText,
+        (existingQuestion as any).solutionText,
+        (existingQuestion as any).previousYearDateText ||
+          [
+            (existingQuestion as any).previousYearMonth,
+            (existingQuestion as any).previousYearYear,
+          ].filter(Boolean).join(" "),
+      );
 
       form.reset({
         subjectId: derivedSubjectId,
         chapterId: existingQuestion.chapterId,
-        text: existingQuestion.text,
+        text: normalizedSections.text,
         type: existingQuestion.type,
         difficulty: existingQuestion.difficulty,
         activeStatus: (existingQuestion as any).activeStatus || "Active",
         verificationStatus: (existingQuestion as any).verificationStatus || "Need to Verified",
         isPreviousYear: Boolean((existingQuestion as any).isPreviousYear),
-        previousYearDateText:
-          (existingQuestion as any).previousYearDateText ||
-          [
-            (existingQuestion as any).previousYearMonth,
-            (existingQuestion as any).previousYearYear,
-          ].filter(Boolean).join(" "),
+        previousYearDateText: normalizedSections.previousYearDateText,
         _localPreview: existingQuestion.imageUrl || undefined,
-        solutionText: (existingQuestion as any).solutionText || "",
+        answerText: normalizedSections.answerText,
+        solutionText: normalizedSections.solutionText,
         _solutionLocalPreview: (existingQuestion as any).solutionImageUrl || undefined,
         choices: (existingQuestion as any).choices?.map((c: any) => ({
           id: c.id,
@@ -423,6 +471,7 @@ export default function QuestionEditor() {
         const qData: any = {
           chapterId: data.chapterId,
           text: normalizedQuestionText,
+          answerText: data.type === "FILLUP" ? (data.answerText || "").trim() : "",
           solutionText: (data.solutionText || "").trim(),
           type: data.type,
           difficulty: data.difficulty,
@@ -469,6 +518,11 @@ export default function QuestionEditor() {
               await createChoice.mutateAsync({ data: cData });
             }
           }
+        } else {
+          const existingChoices = (existingQuestion as any).choices || [];
+          for (const c of existingChoices) {
+            await deleteChoice.mutateAsync({ id: c.id });
+          }
         }
         
         toast({ title: "Question updated successfully" });
@@ -479,6 +533,7 @@ export default function QuestionEditor() {
         const qData: any = {
           chapterId: data.chapterId,
           text: normalizedQuestionText,
+          answerText: data.type === "FILLUP" ? (data.answerText || "").trim() : "",
           solutionText: (data.solutionText || "").trim(),
           type: data.type,
           difficulty: data.difficulty,
@@ -645,6 +700,20 @@ export default function QuestionEditor() {
               </div>
             )}
 
+            {currentValues.type === "MCQ" && currentValues.choices?.some((choice) => choice.isCorrect) && (
+              <div className="space-y-2 pt-4 border-t">
+                <h3 className="text-base font-semibold">Correct Answer</h3>
+                <LatexRenderer content={currentValues.choices.find((choice) => choice.isCorrect)?.text || ""} />
+              </div>
+            )}
+
+            {currentValues.type === "FILLUP" && currentValues.answerText?.trim() && (
+              <div className="space-y-2 pt-4 border-t">
+                <h3 className="text-base font-semibold">Answer</h3>
+                <LatexRenderer content={currentValues.answerText} />
+              </div>
+            )}
+
             {(currentValues.solutionText?.trim() || currentValues._solutionLocalPreview) && (
               <div className="space-y-4 pt-4 border-t">
                 <h3 className="text-base font-semibold">Solution</h3>
@@ -657,7 +726,7 @@ export default function QuestionEditor() {
               </div>
             )}
 
-            {currentValues.type === "FILLUP" && (
+            {currentValues.type === "FILLUP" && !currentValues.answerText?.trim() && (
               <div className="mt-8 border-b-2 border-dashed border-muted-foreground w-64" />
             )}
           </div>
@@ -1047,6 +1116,30 @@ export default function QuestionEditor() {
 
                   <Card>
                     <CardContent className="pt-6 space-y-6">
+                      {watchType === "FILLUP" && (
+                        <FormField
+                          control={form.control}
+                          name="answerText"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Answer (Optional)</FormLabel>
+                              <FormDescription>
+                                Store the final answer separately from the solution. LaTeX math is supported.
+                              </FormDescription>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="e.g., $v = 0.35\\,\\mathrm{m\\,s^{-1}}$"
+                                  className="min-h-[90px] font-mono text-sm"
+                                  {...field}
+                                  value={field.value || ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
                       <FormField
                         control={form.control}
                         name="solutionText"

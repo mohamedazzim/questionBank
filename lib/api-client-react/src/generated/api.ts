@@ -19,6 +19,10 @@ import type {
 import type {
   Chapter,
   Choice,
+  ClearAllQuestions200,
+  ClearAllQuestionsBody,
+  ClearChapterQuestions200,
+  ClearChapterQuestionsBody,
   CreateChapterBody,
   CreateChoiceBody,
   CreateQuestionBody,
@@ -1138,6 +1142,9 @@ export const createQuestion = async (
   if (createQuestionBody.solutionText !== undefined) {
     formData.append(`solutionText`, createQuestionBody.solutionText);
   }
+  if ((createQuestionBody as any).answerText !== undefined) {
+    formData.append(`answerText`, (createQuestionBody as any).answerText);
+  }
   if (createQuestionBody.image !== undefined) {
     formData.append(`image`, createQuestionBody.image);
   }
@@ -1363,6 +1370,9 @@ export const updateQuestion = async (
   }
   if (updateQuestionBody.solutionText !== undefined) {
     formData.append(`solutionText`, updateQuestionBody.solutionText);
+  }
+  if ((updateQuestionBody as any).answerText !== undefined) {
+    formData.append(`answerText`, (updateQuestionBody as any).answerText);
   }
   if (updateQuestionBody.image !== undefined) {
     formData.append(`image`, updateQuestionBody.image);
@@ -1624,6 +1634,183 @@ export function useGetQuestionImage<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Clear all questions from the entire database (development only)
+ */
+export const getClearAllQuestionsUrl = () => {
+  return `/api/questions/clear-all`;
+};
+
+export const clearAllQuestions = async (
+  clearAllQuestionsBody: ClearAllQuestionsBody,
+  options?: RequestInit,
+): Promise<ClearAllQuestions200> => {
+  return customFetch<ClearAllQuestions200>(getClearAllQuestionsUrl(), {
+    ...options,
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(clearAllQuestionsBody),
+  });
+};
+
+export const getClearAllQuestionsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearAllQuestions>>,
+    TError,
+    { data: BodyType<ClearAllQuestionsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearAllQuestions>>,
+  TError,
+  { data: BodyType<ClearAllQuestionsBody> },
+  TContext
+> => {
+  const mutationKey = ["clearAllQuestions"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearAllQuestions>>,
+    { data: BodyType<ClearAllQuestionsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return clearAllQuestions(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearAllQuestionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearAllQuestions>>
+>;
+export type ClearAllQuestionsMutationBody = BodyType<ClearAllQuestionsBody>;
+export type ClearAllQuestionsMutationError = ErrorType<void>;
+
+/**
+ * @summary Clear all questions from the entire database (development only)
+ */
+export const useClearAllQuestions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearAllQuestions>>,
+    TError,
+    { data: BodyType<ClearAllQuestionsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearAllQuestions>>,
+  TError,
+  { data: BodyType<ClearAllQuestionsBody> },
+  TContext
+> => {
+  return useMutation(getClearAllQuestionsMutationOptions(options));
+};
+
+/**
+ * @summary Clear all questions in a chapter (development only)
+ */
+export const getClearChapterQuestionsUrl = (chapterId: number) => {
+  return `/api/questions/chapter/${chapterId}/clear`;
+};
+
+export const clearChapterQuestions = async (
+  chapterId: number,
+  clearChapterQuestionsBody: ClearChapterQuestionsBody,
+  options?: RequestInit,
+): Promise<ClearChapterQuestions200> => {
+  return customFetch<ClearChapterQuestions200>(
+    getClearChapterQuestionsUrl(chapterId),
+    {
+      ...options,
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(clearChapterQuestionsBody),
+    },
+  );
+};
+
+export const getClearChapterQuestionsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearChapterQuestions>>,
+    TError,
+    { chapterId: number; data: BodyType<ClearChapterQuestionsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearChapterQuestions>>,
+  TError,
+  { chapterId: number; data: BodyType<ClearChapterQuestionsBody> },
+  TContext
+> => {
+  const mutationKey = ["clearChapterQuestions"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearChapterQuestions>>,
+    { chapterId: number; data: BodyType<ClearChapterQuestionsBody> }
+  > = (props) => {
+    const { chapterId, data } = props ?? {};
+
+    return clearChapterQuestions(chapterId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearChapterQuestionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearChapterQuestions>>
+>;
+export type ClearChapterQuestionsMutationBody =
+  BodyType<ClearChapterQuestionsBody>;
+export type ClearChapterQuestionsMutationError = ErrorType<void>;
+
+/**
+ * @summary Clear all questions in a chapter (development only)
+ */
+export const useClearChapterQuestions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearChapterQuestions>>,
+    TError,
+    { chapterId: number; data: BodyType<ClearChapterQuestionsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearChapterQuestions>>,
+  TError,
+  { chapterId: number; data: BodyType<ClearChapterQuestionsBody> },
+  TContext
+> => {
+  return useMutation(getClearChapterQuestionsMutationOptions(options));
+};
 
 /**
  * @summary Get full question preview data with base64 images

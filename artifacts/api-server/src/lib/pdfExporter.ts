@@ -87,13 +87,23 @@ interface ChoiceForPdf {
 
 interface QuestionForPdf {
   id: number;
+  questionText?: string;
   text: string;
   type: string;
   difficulty: string;
   chapterName?: string | null;
   subjectName?: string | null;
+  previousYearDateText?: string | null;
+  previousYearYear?: number | null;
+  previousYearMonth?: string | null;
+  answerText?: string | null;
+  solutionText?: string | null;
   imageData?: Buffer | null;
   imageType?: string | null;
+  options?: Array<{
+    text: string;
+    isCorrect: boolean;
+  }>;
   choices: ChoiceForPdf[];
 }
 
@@ -245,51 +255,7 @@ function escapeLatexText(text: string): string {
 }
 
 function renderTextForTex(raw: string): string {
-  const text = raw ?? "";
-
-  if (!hasMathDelimiters(text) && looksLikeLatexExpression(text)) {
-    return `$${text.trim()}$`;
-  }
-
-  let result = "";
-  let i = 0;
-
-  while (i < text.length) {
-    const blockDollar = text.indexOf("$$", i);
-    const inlineDollar = text.indexOf("$", i);
-    const blockBracket = text.indexOf("\\[", i);
-    const inlineParen = text.indexOf("\\(", i);
-
-    const candidates = [
-      { index: blockDollar, open: "$$", close: "$$" },
-      { index: inlineDollar, open: "$", close: "$" },
-      { index: blockBracket, open: "\\[", close: "\\]" },
-      { index: inlineParen, open: "\\(", close: "\\)" },
-    ].filter((c) => c.index !== -1);
-
-    if (candidates.length === 0) {
-      result += escapeLatexText(text.slice(i));
-      break;
-    }
-
-    candidates.sort((a, b) => a.index - b.index);
-    const next = candidates[0];
-
-    result += escapeLatexText(text.slice(i, next.index));
-
-    const contentStart = next.index + next.open.length;
-    const contentEnd = text.indexOf(next.close, contentStart);
-
-    if (contentEnd === -1) {
-      result += escapeLatexText(text.slice(next.index));
-      break;
-    }
-
-    result += text.slice(next.index, contentEnd + next.close.length);
-    i = contentEnd + next.close.length;
-  }
-
-  return result;
+  return (raw ?? "").replace(/\r\n?/g, "\n").trim();
 }
 
 export function generateTex(questions: QuestionForPdf[], title: string): string {
@@ -297,26 +263,46 @@ export function generateTex(questions: QuestionForPdf[], title: string): string 
 
   const texQuestions = questions.map((q) => {
     const lines: string[] = [];
-    lines.push(`\\question ${renderTextForTex(q.text)}`);
+    const questionText = q.questionText ?? q.text;
+    const optionSource = q.options ?? q.choices;
+    const correctOption = optionSource.find((choice) => choice.isCorrect);
+    const answerText = q.type === "MCQ" ? correctOption?.text ?? "" : q.answerText ?? "";
+    const yearText = q.previousYearDateText || [q.previousYearMonth, q.previousYearYear].filter(Boolean).join(" ");
+
+    lines.push(`\\item ${renderTextForTex(questionText)}`);
+
+    if (q.type === "MCQ" && optionSource.length > 0) {
+      lines.push("");
+      lines.push("\\begin{enumerate}");
+      for (const choice of optionSource) {
+        lines.push(`    \\item ${renderTextForTex(choice.text)}`);
+      }
+      lines.push("\\end{enumerate}");
+    }
 
     if (q.imageData && q.imageType) {
       const questionImagePath = `images/${getQuestionImageFileName(q.id, q.imageType)}`;
-      lines.push(`\\textit{See image: ${escapeLatexText(questionImagePath)}}`);
-      lines.push(`\\includegraphics[width=0.5\\textwidth]{${escapeLatexText(questionImagePath)}}`);
+      lines.push("");
+      lines.push("\\begin{Center}");
+      lines.push(`    \\includegraphics[width=0.5\\textwidth]{${escapeLatexText(questionImagePath)}}`);
+      lines.push("\\end{Center}");
     }
 
-    if (q.type === "MCQ" && q.choices.length > 0) {
-      lines.push("\\begin{choices}");
-      for (const choice of q.choices) {
-        const choiceCommand = choice.isCorrect ? "\\CorrectChoice" : "\\choice";
-        lines.push(`${choiceCommand} ${renderTextForTex(choice.text)}`);
-        if (choice.imageData && choice.imageType) {
-          const choiceImagePath = `images/${getChoiceImageFileName(q.id, choice.id, choice.imageType)}`;
-          lines.push(`\\textit{See image: ${escapeLatexText(choiceImagePath)}}`);
-          lines.push(`\\includegraphics[width=0.35\\textwidth]{${escapeLatexText(choiceImagePath)}}`);
-        }
-      }
-      lines.push("\\end{choices}");
+    if (yearText) {
+      lines.push("");
+      lines.push(`Year: ${renderTextForTex(yearText)}`);
+    }
+
+    if (answerText) {
+      lines.push("");
+      lines.push(`Ans: ${renderTextForTex(answerText)}`);
+    }
+
+    if (q.solutionText) {
+      lines.push("");
+      lines.push("\\textbf{Sol:}");
+      lines.push("");
+      lines.push(renderTextForTex(q.solutionText));
     }
 
     return lines.join("\n");
@@ -328,6 +314,7 @@ export function generateTex(questions: QuestionForPdf[], title: string): string 
     "\\usepackage{amssymb}",
     "\\usepackage{graphicx}",
     "\\usepackage{enumitem}",
+    "\\usepackage{ragged2e}",
     "",
     "\\begin{document}",
     `\\title{${escapeLatexText(title || "Questions")}}`,
@@ -351,6 +338,13 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
     const questionImageHtml = questionImageSrc
       ? `<img src="${questionImageSrc}" class="question-image" alt="Question image" />`
       : "";
+
+    const questionText = q.questionText ?? q.text;
+    const optionSource = q.options ?? q.choices;
+    const answerText = q.type === "MCQ"
+      ? optionSource.find((choice) => choice.isCorrect)?.text ?? ""
+      : q.answerText ?? "";
+    const yearText = q.previousYearDateText || [q.previousYearMonth, q.previousYearYear].filter(Boolean).join(" ");
 
     const choicesHtml = q.choices.map((c, ci) => {
       const choiceImageSrc = bufferToBase64DataUri(c.imageData, c.imageType);
@@ -387,9 +381,12 @@ export async function generatePdf(questions: QuestionForPdf[], title: string): P
           </div>
         </div>
         ${q.subjectName ? `<div class="question-meta">${escapeHtml(q.subjectName)}${q.chapterName ? ` › ${escapeHtml(q.chapterName)}` : ""}</div>` : ""}
-        <div class="question-text">${renderLatex(q.text)}</div>
+        <div class="question-text">${renderLatex(questionText)}</div>
         ${questionImageHtml}
-        ${q.choices.length > 0 ? `<div class="choices">${choicesHtml}</div>` : ""}
+        ${optionSource.length > 0 ? `<div class="choices">${choicesHtml}</div>` : ""}
+        ${answerText ? `<div class="answer-section"><div class="section-label">Answer</div><div>${renderLatex(answerText)}</div></div>` : ""}
+        ${q.solutionText ? `<div class="solution-section"><div class="section-label">Solution</div><div>${renderLatex(q.solutionText)}</div></div>` : ""}
+        ${yearText ? `<div class="year-section">Year: ${escapeHtml(yearText)}</div>` : ""}
       </div>`;
   }).join("");
 
@@ -545,6 +542,31 @@ ${katexCss}
       object-fit: contain;
       border-radius: 3px;
       border: 1px solid #e5e7eb;
+    }
+
+    .answer-section,
+    .solution-section {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: #f9fafb;
+      line-height: 1.5;
+    }
+
+    .section-label {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #4b5563;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .year-section {
+      margin-top: 10px;
+      font-size: 9pt;
+      color: #6b7280;
     }
     
     .katex-display { overflow-x: auto; }

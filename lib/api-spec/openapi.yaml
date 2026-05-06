@@ -446,6 +446,78 @@ paths:
         "404":
           description: No image
 
+  /questions/clear-all:
+    delete:
+      operationId: clearAllQuestions
+      tags: [questions]
+      summary: Clear all questions from the entire database (development only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm]
+              properties:
+                confirm:
+                  type: boolean
+                  description: Must be true to confirm deletion
+      responses:
+        "200":
+          description: Successfully cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  deletedCount:
+                    type: integer
+        "403":
+          description: Forbidden (production mode)
+
+  /questions/chapter/{chapterId}/clear:
+    delete:
+      operationId: clearChapterQuestions
+      tags: [questions]
+      summary: Clear all questions in a chapter (development only)
+      parameters:
+        - name: chapterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm]
+              properties:
+                confirm:
+                  type: boolean
+                  description: Must be true to confirm deletion
+      responses:
+        "200":
+          description: Successfully cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  deletedCount:
+                    type: integer
+        "403":
+          description: Forbidden (production mode)
+
   /questions/{id}/preview:
     get:
       operationId: previewQuestion

@@ -7,6 +7,7 @@ import {
   BookOpen, 
   FileQuestion, 
   Download,
+  Upload,
   Tags,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { name: "Subjects", href: "/subjects", icon: Library },
     { name: "Chapters", href: "/chapters", icon: BookOpen },
     { name: "Questions", href: "/questions", icon: FileQuestion },
+    { name: "Bulk Upload", href: "/bulk-upload", icon: Upload },
     { name: "Preview and Labelling", href: "/preview-labelling", icon: Tags },
     { name: "Export", href: "/export", icon: Download },
   ];

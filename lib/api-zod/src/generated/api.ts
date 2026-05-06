@@ -426,6 +426,36 @@ export const GetQuestionImageParams = zod.object({
 });
 
 /**
+ * @summary Clear all questions from the entire database (development only)
+ */
+export const ClearAllQuestionsBody = zod.object({
+  confirm: zod.boolean().describe("Must be true to confirm deletion"),
+});
+
+export const ClearAllQuestionsResponse = zod.object({
+  success: zod.boolean().optional(),
+  message: zod.string().optional(),
+  deletedCount: zod.number().optional(),
+});
+
+/**
+ * @summary Clear all questions in a chapter (development only)
+ */
+export const ClearChapterQuestionsParams = zod.object({
+  chapterId: zod.coerce.number(),
+});
+
+export const ClearChapterQuestionsBody = zod.object({
+  confirm: zod.boolean().describe("Must be true to confirm deletion"),
+});
+
+export const ClearChapterQuestionsResponse = zod.object({
+  success: zod.boolean().optional(),
+  message: zod.string().optional(),
+  deletedCount: zod.number().optional(),
+});
+
+/**
  * @summary Get full question preview data with base64 images
  */
 export const PreviewQuestionParams = zod.object({

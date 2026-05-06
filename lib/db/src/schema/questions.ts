@@ -48,6 +48,7 @@ export const questionsTable = pgTable("questions", {
   imageName: text("image_name"),
   imageType: text("image_type"),
   imageSize: integer("image_size"),
+  answerText: text("answer_text"),
   solutionText: text("solution_text"),
   solutionImageData: bytea("solution_image_data"),
   solutionImageName: text("solution_image_name"),

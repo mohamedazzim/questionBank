@@ -12,6 +12,7 @@ import Questions from "@/pages/questions";
 import QuestionEditor from "@/pages/questions/editor";
 import Export from "@/pages/export";
 import PreviewAndLabelling from "@/pages/preview-labelling";
+import BulkUpload from "@/pages/bulk-upload";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ function Router() {
         <Route path="/questions/:id/edit" component={QuestionEditor} />
         <Route path="/preview-labelling" component={PreviewAndLabelling} />
         <Route path="/export" component={Export} />
+        <Route path="/bulk-upload" component={BulkUpload} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

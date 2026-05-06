@@ -605,3 +605,25 @@ export const ListQuestionsVerificationStatus = {
   Need_to_Verified: "Need to Verified",
   Changes_Needed: "Changes Needed",
 } as const;
+
+export type ClearAllQuestionsBody = {
+  /** Must be true to confirm deletion */
+  confirm: boolean;
+};
+
+export type ClearAllQuestions200 = {
+  success?: boolean;
+  message?: string;
+  deletedCount?: number;
+};
+
+export type ClearChapterQuestionsBody = {
+  /** Must be true to confirm deletion */
+  confirm: boolean;
+};
+
+export type ClearChapterQuestions200 = {
+  success?: boolean;
+  message?: string;
+  deletedCount?: number;
+};

@@ -6,6 +6,7 @@ import {
   useCreateChapter, 
   useUpdateChapter, 
   useDeleteChapter,
+  useClearChapterQuestions,
   getListChaptersQueryKey
 } from "@workspace/api-client-react";
 import { 
@@ -47,7 +48,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Plus, Edit2, Trash2 } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, Eraser } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -66,6 +67,8 @@ export default function Chapters() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [clearingId, setClearingId] = useState<number | null>(null);
+  const [clearConfirmText, setClearConfirmText] = useState("");
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -79,6 +82,7 @@ export default function Chapters() {
   const createChapter = useCreateChapter();
   const updateChapter = useUpdateChapter();
   const deleteChapter = useDeleteChapter();
+  const clearQuestions = useClearChapterQuestions();
 
   const form = useForm<ChapterFormValues>({
     resolver: zodResolver(chapterSchema),
@@ -141,6 +145,30 @@ export default function Chapters() {
           toast({ title: "Chapter deleted" });
         },
         onError: () => toast({ title: "Error deleting chapter", variant: "destructive" })
+      }
+    );
+  };
+
+  const confirmClear = () => {
+    if (!clearingId) return;
+    if (clearConfirmText !== "DELETE") {
+      toast({ title: "Please type DELETE to confirm", variant: "destructive" });
+      return;
+    }
+    clearQuestions.mutate(
+      { chapterId: clearingId, data: { confirm: true } },
+      {
+        onSuccess: (res) => {
+          queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey() });
+          setClearingId(null);
+          setClearConfirmText("");
+          toast({ title: "Success", description: res.message });
+        },
+        onError: (err: any) => toast({ 
+          title: "Error clearing questions", 
+          description: err?.response?.data?.message || err.message,
+          variant: "destructive" 
+        })
       }
     );
   };
@@ -213,6 +241,13 @@ export default function Chapters() {
                   <TableCell>{format(new Date(chapter.createdAt), 'MMM d, yyyy')}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setClearingId(chapter.id)} title="Clear Chapter Questions" className="hidden sm:flex">
+                        <Eraser className="h-4 w-4 mr-2" />
+                        Clear Questions
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setClearingId(chapter.id)} className="sm:hidden text-muted-foreground" title="Clear Chapter Questions">
+                        <Eraser className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(chapter)}>
                         <Edit2 className="h-4 w-4 text-muted-foreground" />
                       </Button>
@@ -304,6 +339,41 @@ export default function Chapters() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!clearingId} onOpenChange={(open) => {
+        if (!open) {
+          setClearingId(null);
+          setClearConfirmText("");
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Chapter Questions</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will safely delete ALL questions and associated images in this chapter. This is typically used for development testing to reset the chapter data.
+              
+              <div className="mt-4">
+                <label className="text-sm font-medium text-foreground">
+                  Type <strong>DELETE</strong> to confirm:
+                </label>
+                <Input 
+                  value={clearConfirmText}
+                  onChange={(e) => setClearConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="mt-2"
+                  autoFocus
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClear} disabled={clearConfirmText !== "DELETE" || clearQuestions.isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {clearQuestions.isPending ? "Clearing..." : "Clear Questions"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -186,6 +186,9 @@ importers:
       express:
         specifier: ^5
         version: 5.2.1
+      extract-zip:
+        specifier: ^2.0.1
+        version: 2.0.1
       katex:
         specifier: ^0.16.45
         version: 0.16.45

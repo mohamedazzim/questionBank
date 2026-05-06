@@ -1,0 +1,1 @@
+import { LaTeXParser } from './src/lib/latexParser'; import * as fs from 'fs'; const parser = new LaTeXParser(); const tex = fs.readFileSync('D:/StrangerThings Season 5/JEE-11.5-P- work,enegry and  power/JEE-11-P-work,energyandpower.tex', 'utf8'); const result = parser.parse(tex); console.log(result.allQuestions.length);
